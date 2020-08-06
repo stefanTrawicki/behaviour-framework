@@ -1,17 +1,19 @@
 CC=clang
-CFLAGS = -g -Wall -Werror
+CFLAGS = -g #-Wall -Werror
 
-all: bt
+all: example
 
-tree.o: tree.h tree.c
-	$(CC) $(CLFAGS) -c tree.c
+example: tree.o
+	@echo "\n--Example--\n"
+	@./example
 
-bt: tree.c example.c
-	$(CC) $(CFLAGS) -o bt example.c tree.c
-
-example:
-	@echo "Running Example..."
-	./bt
+tree.o:
+	$(CC) $(CFLAGS) -c tree.c
+	$(CC) $(CFLAGS) example.c -c
+	$(CC) $(CFLAGS) tree.o example.o -o example
 
 clean:
-	rm -rf bt.dSYM bt
+	rm -rf tree.dSYM
+	rm tree.o
+	rm example.o
+	rm example

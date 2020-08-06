@@ -26,25 +26,26 @@ struct node_actions
 };
 
 // common blocking callback for marking a response
-typedef void (*callback)(void *p_node, struct node_actions *p_callback_actions);
+typedef void (*callback)(void *p_node, void *subject, struct node_actions *p_callback_actions);
 
-// vtable for the tick, enter and failure actions of the branch
+// vtable for the tick, start and failure actions of the branch
 struct node_callbacks
 {
     callback tick;
-    callback enter;
-    callback exit;
+    callback start;
+    callback finish;
 };
 
 // struct for node
 struct node
 {
+    char* label;
     int is_control;
-    struct control_structure *control;
     char is_running;
-
     struct node_actions *actions;
     struct node_callbacks *callbacks;
+    struct control_structure *control;
+
     struct node *parent;
     void *subject;
 };
@@ -57,9 +58,8 @@ enum control_type
     SELECTOR,
     INVERTER,
     RANDOM,
-    PRIORITY,
     REPEATER,
-    _CONTROL_TYPE_COUNT
+    _CONTROL_TYPE_COUNT // must be last to keep count of types
 };
 
 // some nodes are controllers, this structure contains that information
@@ -68,6 +68,7 @@ struct control_structure
     enum control_type type;
     int child_index;
     int child_count;
+    action added_child;
     struct node **child_list;
     int repetitions;
 };
@@ -77,17 +78,19 @@ struct behaviour_tree
     struct node root_node;
 };
 
+void node_add_child(void* p_node);
+
 void behaviour_tree_initialiser();
 void *behaviour_tree_create(void *p_node);
 void *behaviour_tree_tick(void *p_node);
 void *behaviour_tree_delete(void *p_node);
 
 void node_print(void *p_node);
-void *node_create(void *p_subject, void *p_parent_node, struct node_callbacks *p_node_callbacks);
+void *node_create(const char *label, void *p_subject, void *p_parent_node, struct node_callbacks *p_node_callbacks);
 void node_destruct(void *p_node);
 void *node_parent(void *p_node);
 
-void *create_control_node(void *p_parent_node, struct node_callbacks *p_node_callbacks, enum control_type type);
+void *control_node_create(const char *label, void *p_parent_node, enum control_type type);
 void set_repeater_limit(void *p_control_node, int limit);
 
 #endif // TREE_H
