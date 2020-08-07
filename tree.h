@@ -75,13 +75,14 @@ struct control_structure
 
 struct behaviour_tree
 {
-    struct node root_node;
+    struct node *root_node;
+    struct node *current_node;
 };
 
 void node_add_child(void* p_node);
 
 void behaviour_tree_initialiser();
-void *behaviour_tree_create(void *p_node);
+void *behaviour_tree_create(void *p_root_node);
 void *behaviour_tree_tick(void *p_node);
 void *behaviour_tree_delete(void *p_node);
 

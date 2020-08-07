@@ -12,7 +12,8 @@
 Description:  Simple behaviour tree creation framework for later integration into a larger project
 */
 
-static struct node_actions std_node_act;
+static struct node_actions *std_node_act;
+static struct node_actions *std_tree_act;
 static struct node_actions ctrl_act_ml[_CONTROL_TYPE_COUNT];
 static struct node_callbacks ctrl_cb_ml[_CONTROL_TYPE_COUNT];
 
@@ -39,7 +40,7 @@ void *node_create(const char *label, void *p_subject, void *p_parent_node, struc
         strcpy(self->label, label);
     }
     self->callbacks = p_node_callbacks;
-    self->actions = &std_node_act;
+    self->actions = std_node_act;
     self->parent = p_parent_node;
     self->subject = p_subject;
 
@@ -164,7 +165,6 @@ void node_destruct(void *p_node)
     return;
 }
 
-
 /*
     * Gets the parent of the node so we don't have to cast anything.
     * 
@@ -178,4 +178,11 @@ void *node_parent(void *p_node)
 {
     struct node *node = (struct node *)p_node;
     return node->parent;
+}
+
+void *behaviour_tree_create(void *p_root_node) {
+    struct behaviour_tree * tree = malloc(sizeof(struct behaviour_tree));
+    memset(tree, 0, sizeof(struct behaviour_tree));
+    tree->current_node = (struct node *) p_root_node;
+    tree->root_node = (struct node *) p_root_node;
 }
