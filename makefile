@@ -1,7 +1,11 @@
 CC=clang
 CFLAGS = -g #-Wall -Werror
 
-all: example
+all: tree.o
+
+debug: tree.o
+	@echo "\n--Debug--\n"
+	@lldb example
 
 example: tree.o
 	@echo "\n--Example--\n"

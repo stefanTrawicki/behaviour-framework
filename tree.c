@@ -12,10 +12,8 @@
 Description:  Simple behaviour tree creation framework for later integration into a larger project
 */
 
-static struct node_actions *std_node_act;
-static struct node_actions *std_tree_act;
-static struct node_actions ctrl_act_ml[_CONTROL_TYPE_COUNT];
-static struct node_callbacks ctrl_cb_ml[_CONTROL_TYPE_COUNT];
+static struct functions node_fns[_CONTROL_TYPE_COUNT];
+static struct callbacks node_cbs[_CONTROL_TYPE_COUNT];
 
 /*
     * Creates a standard leaf node in the system, no control characteristics
@@ -31,7 +29,7 @@ static struct node_callbacks ctrl_cb_ml[_CONTROL_TYPE_COUNT];
     * returns:
     * pointer to the node created.
 */
-void *node_create(const char *label, void *p_subject, void *p_parent_node, struct node_callbacks *p_node_callbacks)
+void *node_create(const char *label, void *p_subject, void *p_parent_node, struct callbacks *p_cbs)
 {
     struct node *self = malloc(sizeof(struct node));
     memset(self, 0, sizeof(struct node));
@@ -39,8 +37,9 @@ void *node_create(const char *label, void *p_subject, void *p_parent_node, struc
         self->label = malloc(sizeof(char) * strlen(label));
         strcpy(self->label, label);
     }
-    self->callbacks = p_node_callbacks;
-    self->actions = std_node_act;
+    self->fn = &node_fns[LEAF];
+    self->cb = p_cbs;
+
     self->parent = p_parent_node;
     self->subject = p_subject;
 
@@ -78,12 +77,12 @@ void node_add_child(void* p_node) {
     * returns:
     * pointer to the control node created
 */
-void *control_node_create(const char *label, void *p_parent_node, enum control_type type)
+void *control_node_create(const char *label, void *p_parent_node, enum node_type type)
 {
-    struct node *self = node_create(label, 0, p_parent_node, &ctrl_cb_ml[type]);
+    struct node *self = node_create(label, 0, p_parent_node, &node_cbs[type]);
     self->control = malloc(sizeof(struct control_structure));
     memset(self->control, 0, sizeof(struct control_structure));
-    self->actions = &ctrl_act_ml[type];
+    self->fn = &node_fns[type];
     self->is_control = 1;
     self->control->type = type;
     self->control->added_child = node_add_child;
@@ -127,8 +126,8 @@ void node_print(void *p_node)
            "subject: %p\n",
            node->label, node,
            node->is_running, node->parent,
-           (node->parent != NULL) ? node->parent->label : NULL, node->actions,
-           node->callbacks, node->subject);
+           (node->parent != NULL) ? node->parent->label : NULL, node->cb,
+           node->cb, node->subject);
     if (node->is_control)
     {
         char* types[_CONTROL_TYPE_COUNT] = {"ENTRY", "SEQUENCE", "SELECTOR", "INVERTER", "RANDOM", "REPEATER"};
@@ -153,19 +152,6 @@ void node_print(void *p_node)
 }
 
 /*
-    * Call to delete the node, will likely be assigned 'free'.
-    * 
-    * inputs:
-    * void *p_node- the node to delete
-*/
-void node_destruct(void *p_node)
-{
-    struct node *node = (struct node *)p_node;
-    node->actions->destruct(node);
-    return;
-}
-
-/*
     * Gets the parent of the node so we don't have to cast anything.
     * 
     * inputs:
@@ -180,9 +166,34 @@ void *node_parent(void *p_node)
     return node->parent;
 }
 
-void *behaviour_tree_create(void *p_root_node) {
-    struct behaviour_tree * tree = malloc(sizeof(struct behaviour_tree));
+void behaviour_tree_tick(void *p_behaviour_tree)
+{
+    struct behaviour_tree *tree = p_behaviour_tree;
+    struct node *n = tree->current_node;
+}
+
+void leaf_failure(void *p_node) {
+    printf("node failed (%s)\n", ((struct node *)p_node)->label);
+}
+void leaf_success(void *p_node) {
+    printf("node succeeded (%s)\n", ((struct node *)p_node)->label);
+}
+void leaf_running(void *p_node) {
+    printf("node running (%s)\n", ((struct node *)p_node)->label);
+}
+
+void *behaviour_tree_create(void *p_root_node)
+{
+    struct behaviour_tree *tree = malloc(sizeof(struct behaviour_tree));
     memset(tree, 0, sizeof(struct behaviour_tree));
-    tree->current_node = (struct node *) p_root_node;
-    tree->root_node = (struct node *) p_root_node;
+    tree->current_node = (struct node *)p_root_node;
+    tree->root_node = tree->current_node;
+
+    return tree;
+}
+
+void behaviour_tree_initialiser() {
+    node_fns[LEAF].failure = &leaf_failure;
+    node_fns[LEAF].running = &leaf_running;
+    node_fns[LEAF].success = &leaf_success;
 }

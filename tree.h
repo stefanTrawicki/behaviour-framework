@@ -1,39 +1,24 @@
 #if !defined(TREE_H)
 #define TREE_H
 
-// macros for calling callback or operation functions quicky and efficiently
-#define call(p_node, callback)                                    \
-    do                                                            \
-    {                                                             \
-        p_node->cbs->callback(p_node, p_node->parent->callbacks); \
-    } while (0)
-#define act(p_node, action)              \
-    do                                   \
-    {                                    \
-        p_node->actions->action(p_node); \
-    } while (0)
+#define run(p_node, p_func) (p_func(p_node))
 
-// common void-void vfunc, normally for node actions
-typedef void (*action)(void *p_node);
+struct functions;
+struct callbacks;
 
-// vtable for the running, success and failure actions of a branch
-struct node_actions
-{
-    action running;
-    action success;
-    action failure;
-    action destruct;
+typedef void (*function_t)(void *p_node);
+typedef void (*callback_t)(void *p_node, void *p_subject, struct functions *p_funcs);
+
+struct callbacks {
+    callback_t tick;
+    callback_t start;
+    callback_t end;
 };
 
-// common blocking callback for marking a response
-typedef void (*callback)(void *p_node, void *subject, struct node_actions *p_callback_actions);
-
-// vtable for the tick, start and failure actions of the branch
-struct node_callbacks
-{
-    callback tick;
-    callback start;
-    callback finish;
+struct functions {
+    function_t running;
+    function_t success;
+    function_t failure;
 };
 
 // struct for node
@@ -42,8 +27,8 @@ struct node
     char* label;
     int is_control;
     char is_running;
-    struct node_actions *actions;
-    struct node_callbacks *callbacks;
+    struct functions *fn;
+    struct callbacks *cb;
     struct control_structure *control;
 
     struct node *parent;
@@ -51,7 +36,7 @@ struct node
 };
 
 // enumeration for the control_structure types, loosely based on conventional composite and decorator nodes
-enum control_type
+enum node_type
 {
     ENTRY = 0,
     SEQUENCE,
@@ -59,16 +44,17 @@ enum control_type
     INVERTER,
     RANDOM,
     REPEATER,
+    LEAF,
     _CONTROL_TYPE_COUNT // must be last to keep count of types
 };
 
 // some nodes are controllers, this structure contains that information
 struct control_structure
 {
-    enum control_type type;
+    enum node_type type;
     int child_index;
     int child_count;
-    action added_child;
+    function_t added_child;
     struct node **child_list;
     int repetitions;
 };
@@ -79,19 +65,21 @@ struct behaviour_tree
     struct node *current_node;
 };
 
-void node_add_child(void* p_node);
 
 void behaviour_tree_initialiser();
 void *behaviour_tree_create(void *p_root_node);
-void *behaviour_tree_tick(void *p_node);
-void *behaviour_tree_delete(void *p_node);
+void *behaviour_tree_destruct(void *p_node);
+void behaviour_tree_tick(void *p_behaviour_tree);
 
 void node_print(void *p_node);
-void *node_create(const char *label, void *p_subject, void *p_parent_node, struct node_callbacks *p_node_callbacks);
-void node_destruct(void *p_node);
+void *node_create(const char *label, void *p_subject, void *p_parent_node, struct callbacks *p_cbs);
 void *node_parent(void *p_node);
-
-void *control_node_create(const char *label, void *p_parent_node, enum control_type type);
+void node_add_child(void* p_node);
+void *control_node_create(const char *label, void *p_parent_node, enum node_type type);
 void set_repeater_limit(void *p_control_node, int limit);
+
+void leaf_failure(void *p_node);
+void leaf_success(void *p_node);
+void leaf_running(void *p_node);
 
 #endif // TREE_H
