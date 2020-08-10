@@ -166,12 +166,6 @@ void *node_parent(void *p_node)
     return node->parent;
 }
 
-void behaviour_tree_tick(void *p_behaviour_tree)
-{
-    struct behaviour_tree *tree = p_behaviour_tree;
-    struct node *n = tree->current_node;
-}
-
 void leaf_failure(void *p_node) {
     printf("node failed (%s)\n", ((struct node *)p_node)->label);
 }
@@ -182,18 +176,64 @@ void leaf_running(void *p_node) {
     printf("node running (%s)\n", ((struct node *)p_node)->label);
 }
 
+void entry_failure(void *p_node) {
+    printf("entry failed (%s)\n", ((struct node *)p_node)->label);
+}
+void entry_success(void *p_node) {
+    printf("entry succeeded (%s)\n", ((struct node *)p_node)->label);
+}
+void entry_running(void *p_node) {
+    printf("entry running (%s)\n", ((struct node *)p_node)->label);
+}
+void entry_start(void *p_node, void *p_subject, struct functions *p_funcs) {
+    printf("entry started (%s)\n", ((struct node *)p_node)->label);
+}
+void entry_end(void *p_node, void *p_subject, struct functions *p_funcs) {
+    printf("entry ended (%s)\n", ((struct node *)p_node)->label);
+}
+void entry_tick(void *p_node, void *p_subject, struct functions *p_funcs) {
+    printf("entry ticked (%s)\n", ((struct node *)p_node)->label);
+}
+
 void *behaviour_tree_create(void *p_root_node)
 {
     struct behaviour_tree *tree = malloc(sizeof(struct behaviour_tree));
     memset(tree, 0, sizeof(struct behaviour_tree));
     tree->current_node = (struct node *)p_root_node;
     tree->root_node = tree->current_node;
+    tree->is_running = 0;
 
     return tree;
+}
+
+void behaviour_tree_tick(void *p_behaviour_tree, void *p_subject) {
+
+    struct behaviour_tree *this = (struct behaviour_tree *)p_behaviour_tree;
+    if (this->is_running)
+    {
+        if (this->current_node->parent) {
+            this->current_node->parent->fn->running(this->current_node->parent);
+        }
+    }
+    else
+    {
+        this->is_running = 1;
+        this->current_node->subject = p_subject;
+        this->root_node->cb->start(this->root_node, p_subject, this->root_node->fn);
+        this->root_node->cb->tick(this->root_node, p_subject, this->root_node->fn);
+    }
 }
 
 void behaviour_tree_initialiser() {
     node_fns[LEAF].failure = &leaf_failure;
     node_fns[LEAF].running = &leaf_running;
     node_fns[LEAF].success = &leaf_success;
+
+    node_fns[ENTRY].failure = &entry_failure;
+    node_fns[ENTRY].running = &entry_running;
+    node_fns[ENTRY].success = &entry_success;
+
+    node_cbs[ENTRY].start = &entry_start;
+    node_cbs[ENTRY].end = &entry_end;
+    node_cbs[ENTRY].tick = &entry_tick;
 }

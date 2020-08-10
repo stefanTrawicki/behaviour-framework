@@ -54,8 +54,9 @@ int main(int argc, char **argv)
     struct node *reg_node2 = node_create("leaf 2", NULL, repeater_node, NULL);
 
     struct behaviour_tree * bt = behaviour_tree_create(entry_node);
-
-    reg_node->cb->tick(reg_node, &Subject, reg_node->fn);
+    behaviour_tree_tick(bt, &Subject);
+    behaviour_tree_tick(bt, &Subject);
+    // reg_node->cb->tick(reg_node, &Subject, reg_node->fn);
 
     return 0;
 }

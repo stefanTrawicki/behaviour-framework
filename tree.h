@@ -61,6 +61,7 @@ struct control_structure
 
 struct behaviour_tree
 {
+    int is_running;
     struct node *root_node;
     struct node *current_node;
 };
@@ -69,7 +70,7 @@ struct behaviour_tree
 void behaviour_tree_initialiser();
 void *behaviour_tree_create(void *p_root_node);
 void *behaviour_tree_destruct(void *p_node);
-void behaviour_tree_tick(void *p_behaviour_tree);
+void behaviour_tree_tick(void *p_behaviour_tree, void *p_subject);
 
 void node_print(void *p_node);
 void *node_create(const char *label, void *p_subject, void *p_parent_node, struct callbacks *p_cbs);
@@ -81,5 +82,9 @@ void set_repeater_limit(void *p_control_node, int limit);
 void leaf_failure(void *p_node);
 void leaf_success(void *p_node);
 void leaf_running(void *p_node);
+
+void entry_failure(void *p_node);
+void entry_success(void *p_node);
+void entry_running(void *p_node);
 
 #endif // TREE_H
