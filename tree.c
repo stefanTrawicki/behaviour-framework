@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /*
     Project:  behaviour-framework
@@ -14,6 +15,10 @@ Description:  Simple behaviour tree creation framework for later integration int
 
 static struct functions node_fns[_CONTROL_TYPE_COUNT];
 static struct callbacks node_cbs[_CONTROL_TYPE_COUNT];
+
+void node_running(void *p_node);
+void node_failure(void *p_node);
+void node_success(void *p_node);
 
 /*
     * Creates a standard leaf node in the system, no control characteristics
@@ -60,6 +65,7 @@ void node_add_child(void* p_node) {
     c_s->child_count++;
     c_s->child_list = realloc(c_s->child_list, c_s->child_count);
     c_s->child_list[c_s->child_count-1] = (struct node *)p_node;
+    ((struct node*)p_node)->bt = node->bt;
 }
 
 /*
@@ -123,11 +129,17 @@ void node_print(void *p_node)
            "parent label: '%s'\n"
            "actions: %p\n"
            "callbacks: %p\n"
-           "subject: %p\n",
-           node->label, node,
-           node->is_running, node->parent,
-           (node->parent != NULL) ? node->parent->label : NULL, node->cb,
-           node->cb, node->subject);
+           "subject: %p\n"
+           "behaviour_tree: %p\n",
+           node->label,
+           p_node,
+           node->is_running,
+           node->parent,
+           (node->parent != NULL) ? node->parent->label : NULL,
+           node->fn,
+           node->cb,
+           node->subject,
+           (node->bt != NULL) ? node->bt : NULL);
     if (node->is_control)
     {
         char* types[_CONTROL_TYPE_COUNT] = {"ENTRY", "SEQUENCE", "SELECTOR", "INVERTER", "RANDOM", "REPEATER"};
@@ -166,6 +178,59 @@ void *node_parent(void *p_node)
     return node->parent;
 }
 
+void *behaviour_tree_create(void *p_root_node)
+{
+    struct node *root_node = p_root_node;
+    struct behaviour_tree *tree = malloc(sizeof(struct behaviour_tree));
+    memset(tree, 0, sizeof(struct behaviour_tree));
+    tree->current_node = root_node;
+    tree->root_node = tree->current_node;
+    tree->tree_started = 0;
+    root_node->bt = tree;
+    tree->halted = 0;
+
+    return tree;
+}
+
+void behaviour_tree_set_current(void *p_behaviour_tree, void *p_node) {
+    struct behaviour_tree *tree = p_behaviour_tree;
+    tree->current_node = (struct node *)p_node;
+}
+
+void behaviour_tree_tick(void *p_behaviour_tree) {
+
+    struct behaviour_tree *this = (struct behaviour_tree *)p_behaviour_tree;
+    printf("tree ticked\n");
+    if (this->tree_started)
+    {
+        if (this->current_node->is_running) {
+            this->current_node->cb->tick(this->current_node);
+        } else {
+            this->current_node->cb->end(this->current_node);
+        }
+    }
+    else
+    {
+        this->tree_started = 1;
+        this->current_node->cb->start(this->root_node);
+    }
+}
+
+void node_failure(void *p_node) {
+    struct node *n = p_node;
+    n->fn->failure(p_node);
+}
+
+void node_success(void *p_node) {
+    struct node *n = p_node;
+    n->fn->success(p_node);
+}
+
+void node_running(void *p_node) {
+    struct node *n = p_node;
+    n->fn->running(p_node);
+}
+
 void leaf_failure(void *p_node) {
     printf("node failed (%s)\n", ((struct node *)p_node)->label);
 }
@@ -177,51 +242,40 @@ void leaf_running(void *p_node) {
 }
 
 void entry_failure(void *p_node) {
-    printf("entry failed (%s)\n", ((struct node *)p_node)->label);
+    struct node *node = p_node;
+    printf("\t\t%s failed\n", node->label);
+    node->is_running = 0;
 }
 void entry_success(void *p_node) {
-    printf("entry succeeded (%s)\n", ((struct node *)p_node)->label);
+    struct node *node = p_node;
+    printf("\t\t%s success\n", node->label);
+    node->is_running = 0;
 }
 void entry_running(void *p_node) {
-    printf("entry running (%s)\n", ((struct node *)p_node)->label);
+    struct node *node = p_node;
+    printf("\t\t%s running\n", node->label);
 }
-void entry_start(void *p_node, void *p_subject, struct functions *p_funcs) {
-    printf("entry started (%s)\n", ((struct node *)p_node)->label);
+void entry_start(void *p_node) {
+    struct node *node = p_node;
+    printf("\tentry started (%s)\n", node->label);
+    node->is_running = 1;
+    behaviour_tree_set_current(node->bt, node);
 }
-void entry_end(void *p_node, void *p_subject, struct functions *p_funcs) {
-    printf("entry ended (%s)\n", ((struct node *)p_node)->label);
+void entry_end(void *p_node) {
+    struct node *node = p_node;
+    printf("\tentry ended (%s)\n", node->label);
+    node->bt->halted = 1;
 }
-void entry_tick(void *p_node, void *p_subject, struct functions *p_funcs) {
-    printf("entry ticked (%s)\n", ((struct node *)p_node)->label);
-}
+void entry_tick(void *p_node) {
+    struct node *node = p_node;
+    int *p_s = node->subject;
+    printf("\tentry ticked (%s)\n", node->label);
 
-void *behaviour_tree_create(void *p_root_node)
-{
-    struct behaviour_tree *tree = malloc(sizeof(struct behaviour_tree));
-    memset(tree, 0, sizeof(struct behaviour_tree));
-    tree->current_node = (struct node *)p_root_node;
-    tree->root_node = tree->current_node;
-    tree->is_running = 0;
+    (*p_s)++;
 
-    return tree;
-}
-
-void behaviour_tree_tick(void *p_behaviour_tree, void *p_subject) {
-
-    struct behaviour_tree *this = (struct behaviour_tree *)p_behaviour_tree;
-    if (this->is_running)
-    {
-        if (this->current_node->parent) {
-            this->current_node->parent->fn->running(this->current_node->parent);
-        }
-    }
-    else
-    {
-        this->is_running = 1;
-        this->current_node->subject = p_subject;
-        this->root_node->cb->start(this->root_node, p_subject, this->root_node->fn);
-        this->root_node->cb->tick(this->root_node, p_subject, this->root_node->fn);
-    }
+    if ((*p_s) > 3) node_success(node);
+    else if ((*p_s) < 0) node_failure(node);
+    else node_running(node);
 }
 
 void behaviour_tree_initialiser() {
@@ -236,4 +290,12 @@ void behaviour_tree_initialiser() {
     node_cbs[ENTRY].start = &entry_start;
     node_cbs[ENTRY].end = &entry_end;
     node_cbs[ENTRY].tick = &entry_tick;
+
+    // node_fns[SEQUENCE].failure = &sequence_failure;
+    // node_fns[SEQUENCE].running = &sequence_running;
+    // node_fns[SEQUENCE].success = &sequence_success;
+
+    // node_cbs[SEQUENCE].start = &sequence_start;
+    // node_cbs[SEQUENCE].end = &sequence_end;
+    // node_cbs[SEQUENCE].tick = &sequence_tick;
 }
