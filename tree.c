@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 /*
     Project:  behaviour-framework
@@ -47,6 +46,8 @@ void *node_create(const char *label, void *p_subject, void *p_parent_node, struc
 
     self->parent = p_parent_node;
     self->subject = p_subject;
+
+    self->is_finished = 0;
 
     if (p_parent_node != NULL) self->parent->control->added_child(self);
     return self;
@@ -198,21 +199,16 @@ void behaviour_tree_set_current(void *p_behaviour_tree, void *p_node) {
 }
 
 void behaviour_tree_tick(void *p_behaviour_tree) {
-
     struct behaviour_tree *this = (struct behaviour_tree *)p_behaviour_tree;
     printf("tree ticked\n");
-    if (this->tree_started)
-    {
-        if (this->current_node->is_running) {
-            this->current_node->cb->tick(this->current_node);
-        } else {
-            this->current_node->cb->end(this->current_node);
-        }
-    }
-    else
-    {
-        this->tree_started = 1;
-        this->current_node->cb->start(this->root_node);
+    struct node *c = this->current_node;
+    if (!c->is_finished) {
+        if (!c->is_running) {
+            c->cb->start(c);
+            c->cb->tick(c);
+        } else if (c->is_running) c->cb->tick(c);
+    } else {
+        c->cb->end(c);
     }
 }
 
@@ -231,51 +227,74 @@ void node_running(void *p_node) {
     n->fn->running(p_node);
 }
 
-void leaf_failure(void *p_node) {
-    printf("node failed (%s)\n", ((struct node *)p_node)->label);
-}
-void leaf_success(void *p_node) {
-    printf("node succeeded (%s)\n", ((struct node *)p_node)->label);
-}
-void leaf_running(void *p_node) {
-    printf("node running (%s)\n", ((struct node *)p_node)->label);
-}
-
 void entry_failure(void *p_node) {
     struct node *node = p_node;
-    printf("\t\t%s failed\n", node->label);
+    printf("\t\t%s failure (no children?) \n", node->label);
+    node->is_finished = 1;
     node->is_running = 0;
 }
+
 void entry_success(void *p_node) {
     struct node *node = p_node;
-    printf("\t\t%s success\n", node->label);
+    node->is_finished = 1;
     node->is_running = 0;
+    printf("\t\t%s success\n", node->label);
 }
+
 void entry_running(void *p_node) {
     struct node *node = p_node;
     printf("\t\t%s running\n", node->label);
 }
+
 void entry_start(void *p_node) {
+    printf("\tstarted entry\n");
     struct node *node = p_node;
-    printf("\tentry started (%s)\n", node->label);
     node->is_running = 1;
-    behaviour_tree_set_current(node->bt, node);
 }
+
 void entry_end(void *p_node) {
+    printf("\tended entry\n");
     struct node *node = p_node;
-    printf("\tentry ended (%s)\n", node->label);
     node->bt->halted = 1;
 }
+
 void entry_tick(void *p_node) {
+    printf("\tticked entry\n");
+
     struct node *node = p_node;
-    int *p_s = node->subject;
-    printf("\tentry ticked (%s)\n", node->label);
+    if (node->control->child_count > 0) {
+        struct control_structure *c = node->control;
+        if (c->child_index < c->child_count) {
+            behaviour_tree_set_current(node->bt, c->child_list[c->child_index]);
+            c->child_index++;
+            node_running(node);
+        } else {
+            node_success(node);
+        }
+    } else {
+        node_failure(node);
+    }
+}
 
-    (*p_s)++;
+void leaf_failure(void *p_node) {
+    struct node *node = p_node;
+    printf("\t\t%s failed\n", node->label);
+    node->is_running = 0;
+    node->is_finished = 1;
+    behaviour_tree_set_current(node->bt, node->parent);
+}
 
-    if ((*p_s) > 3) node_success(node);
-    else if ((*p_s) < 0) node_failure(node);
-    else node_running(node);
+void leaf_success(void *p_node) {
+    struct node *node = p_node;
+    printf("\t\t%s success\n", node->label);
+    node->is_running = 0;
+    node->is_finished = 1;
+    behaviour_tree_set_current(node->bt, node->parent);
+}
+
+void leaf_running(void *p_node) {
+    struct node *node = p_node;
+    printf("\t\t%s running\n", node->label);
 }
 
 void behaviour_tree_initialiser() {

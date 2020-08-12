@@ -27,6 +27,7 @@ struct node
     char* label;
     int is_control;
     int is_running;
+    int is_finished;
     struct functions *fn;
     struct callbacks *cb;
     struct control_structure *control;
@@ -72,6 +73,7 @@ void behaviour_tree_initialiser();
 void *behaviour_tree_create(void *p_root_node);
 void *behaviour_tree_destruct(void *p_node);
 void behaviour_tree_tick(void *p_behaviour_tree);
+void behaviour_tree_set_current(void *p_behaviour_tree, void *p_node);
 
 void node_print(void *p_node);
 void *node_create(const char *label, void *p_subject, void *p_parent_node, struct callbacks *p_cbs);
