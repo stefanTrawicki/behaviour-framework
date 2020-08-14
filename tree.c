@@ -233,9 +233,9 @@ void node_running(void *p_node) {
 
 void entry_failure(void *p_node) {
     struct node *node = p_node;
-    printf("\t\t%s failure (no children?) \n", node->label);
     node->is_finished = 1;
     node->is_running = 0;
+    printf("\t\t%s failure\n", node->label);
 }
 
 void entry_success(void *p_node) {
@@ -268,12 +268,15 @@ void entry_tick(void *p_node) {
     struct node *node = p_node;
     if (node->control->child_count > 0) {
         struct control_structure *c = node->control;
-        if (c->child_index < c->child_count) {
-            behaviour_tree_set_current(node->bt, c->child_list[c->child_index]);
-            c->child_index++;
-            node_running(node);
-        } else {
+        if (c->child_list[0]->state == FAILED) {
+            node_failure(node);
+            return;
+        } else if (c->child_list[0]->state == SUCCESSFUL) {
             node_success(node);
+            return;
+        } else if (c->child_index < c->child_count) {
+            behaviour_tree_set_current(node->bt, c->child_list[0]);
+            node_running(node);
         }
     } else {
         node_failure(node);
@@ -297,9 +300,13 @@ void sequence_tick(void *p_node){
     printf("\t%s ticked\n", node->label);
     if (node->control->child_count > 0) {
         struct control_structure *c = node->control;
-        if (c->child_list[c->child_index]->state == FAILED) {
-            node_failure(node);
-        } else if (c->child_index < c->child_count) {
+        if (c->child_index < c->child_count) {
+            for (int i = 0; i < c->child_index; i++) {
+                if (c->child_list[i]->state == FAILED) {
+                    node_failure(node);
+                    return;
+                }
+            }
             behaviour_tree_set_current(node->bt, c->child_list[c->child_index]);
             c->child_index++;
             node_running(node);
