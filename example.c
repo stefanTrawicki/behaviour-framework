@@ -53,9 +53,7 @@ void t2(void *p_node)
 
     (*p_s)++;
 
-    if ((*p_s) > 6) node_success(node);
-    else if ((*p_s) < 0) node_failure(node);
-    else node_running(node);
+    node_failure(node);
 }
 
 int main(int argc, char **argv)
@@ -77,12 +75,14 @@ int main(int argc, char **argv)
     struct node *entry_node = control_node_create("E", NULL, ENTRY);
     struct behaviour_tree * bt = behaviour_tree_create(entry_node);
 
-    struct node *leaf1 = node_create("L1", &Subject, entry_node, &l1_callbacks);
-    struct node *leaf2 = node_create("L2", &Subject, entry_node, &l2_callbacks);
+    struct node *sequence_node = control_node_create("S", entry_node, SEQUENCE);
+
+    struct node *leaf1 = node_create("L1", &Subject, sequence_node, &l1_callbacks);
+    struct node *leaf2 = node_create("L2", &Subject, sequence_node, &l2_callbacks);
 
     while (!bt->halted) {
         behaviour_tree_tick(bt);
-        usleep(500000);
+        // usleep(500000);
     }
 
     printf("Tree terminated\n");

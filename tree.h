@@ -21,6 +21,13 @@ struct functions {
     function_t failure;
 };
 
+enum node_state
+{
+    FAILED,
+    SUCCESSFUL,
+    UNINITIALISED
+};
+
 // struct for node
 struct node
 {
@@ -28,6 +35,7 @@ struct node
     int is_control;
     int is_running;
     int is_finished;
+    enum node_state state;
     struct functions *fn;
     struct callbacks *cb;
     struct control_structure *control;
@@ -61,6 +69,7 @@ struct control_structure
     int repetitions;
 };
 
+
 struct behaviour_tree
 {
     int tree_started;
@@ -93,5 +102,17 @@ void leaf_running(void *p_node);
 void entry_failure(void *p_node);
 void entry_success(void *p_node);
 void entry_running(void *p_node);
+
+void entry_start(void *p_node);
+void entry_end(void *p_node);
+void entry_tick(void *p_node);
+
+void sequence_start(void *p_node);
+void sequence_end(void *p_node);
+void sequence_tick(void *p_node);
+
+void sequence_failure(void *p_node);
+void sequence_success(void *p_node);
+void sequence_running(void *p_node);
 
 #endif // TREE_H
