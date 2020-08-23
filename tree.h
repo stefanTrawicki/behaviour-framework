@@ -99,10 +99,6 @@ void leaf_failure(void *p_node);
 void leaf_success(void *p_node);
 void leaf_running(void *p_node);
 
-void entry_failure(void *p_node);
-void entry_success(void *p_node);
-void entry_running(void *p_node);
-
 void entry_start(void *p_node);
 void entry_end(void *p_node);
 void entry_tick(void *p_node);
@@ -111,8 +107,8 @@ void sequence_start(void *p_node);
 void sequence_end(void *p_node);
 void sequence_tick(void *p_node);
 
-void sequence_failure(void *p_node);
-void sequence_success(void *p_node);
-void sequence_running(void *p_node);
+void selector_start(void *p_node);
+void selector_end(void *p_node);
+void selector_tick(void *p_node);
 
 #endif // TREE_H
