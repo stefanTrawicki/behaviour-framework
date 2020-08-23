@@ -111,4 +111,8 @@ void selector_start(void *p_node);
 void selector_end(void *p_node);
 void selector_tick(void *p_node);
 
+void inverter_start(void *p_node);
+void inverter_end(void *p_node);
+void inverter_tick(void *p_node);
+
 #endif // TREE_H

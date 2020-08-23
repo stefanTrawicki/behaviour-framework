@@ -157,8 +157,7 @@ void node_print(void *p_node)
             printf("Children:\n");
             for (size_t i = 0; i < node->control->child_count; i++)
             {
-                printf("\tlabel: %s %c", node->control->child_list[i]->label,
-                (i+1 == node->control->child_count || i % 3 == 0) ? '\n':'\t');
+                printf("label: %s\n", node->control->child_list[i]->label);
             }
         }
         
@@ -204,7 +203,7 @@ void behaviour_tree_set_current(void *p_behaviour_tree, void *p_node)
 void behaviour_tree_tick(void *p_behaviour_tree)
 {
     struct behaviour_tree *this = (struct behaviour_tree *)p_behaviour_tree;
-    printf("tree ticked\n");
+    // printf("tree ticked\n");
     struct node *c = this->current_node;
     if (!c->is_finished)
     {
@@ -219,6 +218,7 @@ void behaviour_tree_tick(void *p_behaviour_tree)
     else
     {
         c->cb->end(c);
+        printf("\n");
     }
 }
 
@@ -244,24 +244,24 @@ void node_running(void *p_node)
 
 void entry_start(void *p_node)
 {
-    printf("\tstarted entry\n");
     struct node *node = p_node;
+    printf("%s started\n", node->label);
     node->is_running = 1;
 }
 
 void entry_end(void *p_node)
 {
-    printf("\tended entry\n");
     struct node *node = p_node;
+    printf("%s ended\n", node->label);
     node->bt->halted = 1;
     behaviour_tree_set_current(node->bt, node->parent);
 }
 
 void entry_tick(void *p_node)
 {
-    printf("\tticked entry\n");
-
     struct node *node = p_node;
+    printf("%s ticked\n", node->label);
+
     if (node->control->child_count > 0)
     {
         struct control_structure *c = node->control;
@@ -279,32 +279,34 @@ void entry_tick(void *p_node)
         {
             behaviour_tree_set_current(node->bt, c->child_list[0]);
             node_running(node);
+            return;
         }
     }
     else
     {
         node_failure(node);
+        return;
     }
 }
 
 void sequence_start(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t%s started\n", node->label);
+    printf("%s started\n", node->label);
     node->is_running = 1;
 }
 
 void sequence_end(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t%s ended\n", node->label);
+    printf("%s ended\n", node->label);
     behaviour_tree_set_current(node->bt, node->parent);
 }
 
 void sequence_tick(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t%s ticked\n", node->label);
+    printf("%s ticked\n", node->label);
     if (node->control->child_count > 0)
     {
         struct control_structure *c = node->control;
@@ -346,21 +348,21 @@ void sequence_tick(void *p_node)
 void selector_start(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t%s started\n", node->label);
+    printf("%s started\n", node->label);
     node->is_running = 1;
 }
 
 void selector_end(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t%s ended\n", node->label);
+    printf("%s ended\n", node->label);
     behaviour_tree_set_current(node->bt, node->parent);
 }
 
 void selector_tick(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t%s ticked\n", node->label);
+    printf("%s ticked\n", node->label);
     if (node->control->child_count > 0)
     {
         struct control_structure *c = node->control;
@@ -391,10 +393,52 @@ void selector_tick(void *p_node)
     }
 }
 
+void inverter_start(void *p_node)
+{
+    struct node *node = p_node;
+    printf("%s started\n", node->label);
+    node->is_running = 1;
+}
+
+void inverter_end(void *p_node)
+{
+    struct node *node = p_node;
+    printf("%s ended\n", node->label);
+    behaviour_tree_set_current(node->bt, node->parent);
+}
+
+void inverter_tick(void *p_node)
+{
+    struct node *node = p_node;
+    if (node->control->child_count > 0)
+    {
+        struct control_structure *c = node->control;
+        if (c->child_list[0]->state == FAILED)
+        {
+            node_success(node);
+            return;
+        }
+        else if (c->child_list[0]->state == SUCCESSFUL)
+        {
+            node_failure(node);
+            return;
+        }
+        else if (c->child_list[0]->state == UNINITIALISED)
+        {
+            behaviour_tree_set_current(node->bt, c->child_list[0]);
+            return;
+        }
+    }
+    else
+    {
+        node_failure(node);
+    }
+}
+
 void leaf_failure(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t\t%s failed\n", node->label);
+    printf("%s failed\n", node->label);
     node->is_finished = 1;
     node->is_running = 0;
 }
@@ -402,7 +446,7 @@ void leaf_failure(void *p_node)
 void leaf_success(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t\t%s success\n", node->label);
+    printf("%s success\n", node->label);
     node->is_finished = 1;
     node->is_running = 0;
 }
@@ -410,7 +454,7 @@ void leaf_success(void *p_node)
 void leaf_running(void *p_node)
 {
     struct node *node = p_node;
-    printf("\t\t%s running\n", node->label);
+    printf("%s running\n", node->label);
 }
 
 void behaviour_tree_initialiser()
@@ -427,7 +471,12 @@ void behaviour_tree_initialiser()
     node_cbs[SELECTOR].end = &selector_end;
     node_cbs[SELECTOR].tick = &selector_tick;
 
-    for (int i = 0; i < _CONTROL_TYPE_COUNT; i++) {
+    node_cbs[INVERTER].start = &inverter_start;
+    node_cbs[INVERTER].end = &inverter_end;
+    node_cbs[INVERTER].tick = &inverter_tick;
+
+    for (int i = 0; i < _CONTROL_TYPE_COUNT; i++)
+    {
         node_fns[i].running = &leaf_running;
         node_fns[i].failure = &leaf_failure;
         node_fns[i].success = &leaf_success;
