@@ -77,20 +77,17 @@ int main(int argc, char **argv)
 
     struct node *sequence_node_1 = control_node_create("S1", entry_node, SEQUENCE);
 
-    struct node *leaf1 = node_create("L1", &Subject, sequence_node_1, &success_callbacks);
+    struct node *leaf_1 = node_create("L1", &Subject, sequence_node_1, &success_callbacks);
+    struct node *leaf_2 = node_create("L2", &Subject, sequence_node_1, &success_callbacks);
 
     struct node *sequence_node_2 = control_node_create("S2", sequence_node_1, SEQUENCE);
 
-    struct node *leaf2 = node_create("L2", &Subject, sequence_node_1, &success_callbacks);
+    struct node *leaf_3 = node_create("L3", &Subject, sequence_node_2, &success_callbacks);
+    struct node *leaf_4 = node_create("L4", &Subject, sequence_node_2, &success_callbacks);
 
-    struct node *leaf3 = node_create("L3", &Subject, sequence_node_2, &success_callbacks);
-    struct node *leaf4 = node_create("L4", &Subject, sequence_node_2, &success_callbacks);
-
-    struct node *leaf5 = node_create("L5", &Subject, sequence_node_2, &fail_callbacks);
 
     while (!bt->halted) {
         behaviour_tree_tick(bt);
-        usleep(100000);
     }
 
     printf("Tree terminated\n");

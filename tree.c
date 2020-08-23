@@ -292,7 +292,6 @@ void sequence_start(void *p_node){
 void sequence_end(void *p_node){
     struct node *node = p_node;
     printf("\t%s ended\n", node->label);
-    behaviour_tree_set_current(node->bt, node->parent);
 }
 
 void sequence_tick(void *p_node){
@@ -300,56 +299,67 @@ void sequence_tick(void *p_node){
     printf("\t%s ticked\n", node->label);
     if (node->control->child_count > 0) {
         struct control_structure *c = node->control;
-        if (c->child_index < c->child_count) {
-            for (int i = 0; i < c->child_index; i++) {
-                if (c->child_list[i]->state == FAILED) {
-                    node_failure(node);
-                    return;
-                }
+
+        int flag = 1;
+        for (int i = 0; i < c->child_count; i++) {
+            if (c->child_list[i]->state == FAILED) {
+                node_failure(node);
+                return;
             }
-            behaviour_tree_set_current(node->bt, c->child_list[c->child_index]);
-            c->child_index++;
-            node_running(node);
-        } else {
-            node_success(node);
+            if (c->child_index == c->child_count) {
+            for (int j = 0; j < c->child_count; j++) {
+                if (c->child_list[j]->state != SUCCESSFUL) flag = 0;
+            }
+            if (flag) {
+                node_success(node);
+                return;
+            }
         }
+        }
+        behaviour_tree_set_current(node->bt, c->child_list[c->child_index]);
+        c->child_index++;
+        node_running(node);
+        return;
     } else {
         node_failure(node);
+        return;
     }
 }
 
-void sequence_failure(void *p_node){
-    struct node *node = p_node;
-    printf("\t\t%s failure\n", node->label);
-    node->is_finished = 1;
-    node->is_running = 0;
-}
+// void sequence_failure(void *p_node){
+//     struct node *node = p_node;
+//     printf("\t\t%s failure\n", node->label);
+//     node->is_finished = 1;
+//     node->is_running = 0;
+//     behaviour_tree_set_current(node->bt, node->parent);
+// }
 
-void sequence_success(void *p_node){
-    struct node *node = p_node;
-    printf("\t\t%s success\n", node->label);
-    node->is_finished = 1;
-    node->is_running = 0;
-}
+// void sequence_success(void *p_node){
+//     struct node *node = p_node;
+//     printf("\t\t%s success\n", node->label);
+//     node->is_finished = 1;
+//     node->is_running = 0;
+//     behaviour_tree_set_current(node->bt, node->parent);
+// }
 
-void sequence_running(void *p_node){
-    struct node *node = p_node;
-    printf("\t\t%s running\n", node->label);
-}
+// void sequence_running(void *p_node){
+//     struct node *node = p_node;
+//     printf("\t\t%s running\n", node->label);
+// }
 
 void leaf_failure(void *p_node) {
     struct node *node = p_node;
     printf("\t\t%s failed\n", node->label);
-    node->is_running = 0;
     node->is_finished = 1;
+    node->is_running = 0;
     behaviour_tree_set_current(node->bt, node->parent);
 }
 
 void leaf_success(void *p_node) {
     struct node *node = p_node;
     printf("\t\t%s success\n", node->label);
-    node->is_running = 0;
     node->is_finished = 1;
+    node->is_running = 0;
     behaviour_tree_set_current(node->bt, node->parent);
 }
 
@@ -371,9 +381,9 @@ void behaviour_tree_initialiser() {
     node_cbs[ENTRY].end = &entry_end;
     node_cbs[ENTRY].tick = &entry_tick;
 
-    node_fns[SEQUENCE].failure = &sequence_failure;
-    node_fns[SEQUENCE].running = &sequence_running;
-    node_fns[SEQUENCE].success = &sequence_success;
+    node_fns[SEQUENCE].failure = &leaf_failure;
+    node_fns[SEQUENCE].running = &leaf_running;
+    node_fns[SEQUENCE].success = &leaf_success;
 
     node_cbs[SEQUENCE].start = &sequence_start;
     node_cbs[SEQUENCE].end = &sequence_end;
