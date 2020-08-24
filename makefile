@@ -21,3 +21,4 @@ clean:
 	rm tree.o
 	rm example.o
 	rm example
+	rm log.txt
