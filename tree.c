@@ -31,6 +31,8 @@ void *_node_add_to_parent(void *p_node)
     node_t *node = p_node;
     node->tree = parent->tree;
 
+    _behaviour_tree_add_child(node->tree, node);
+
     return (node_t *)p_node;
 }
 
@@ -356,15 +358,14 @@ void *behaviour_tree_create(const char *log_path, uint8_t flags)
     behaviour_tree_t *tree = malloc(sizeof(behaviour_tree_t));
     memset(tree, 0, sizeof(behaviour_tree_t));
 
+    tree->node_c = 0;
+
     memset(tree->action_vtables, 0, sizeof(action_vtable_t) * _CONTROL_TYPE_COUNT);
     memset(tree->state_vtables, 0, sizeof(state_vtable_t) * _CONTROL_TYPE_COUNT);
 
     tree->flags = flags;
     SET_FLAG(tree->flags, IS_LOGGING);
-    if (CHECK_FLAG(tree->flags, IS_LOGGING))
-    {
-        _behaviour_tree_enable_logging(tree, log_path);
-    }
+    if (CHECK_FLAG(tree->flags, IS_LOGGING)) _behaviour_tree_enable_logging(tree, log_path);
 
     tree->action_vtables[ENTRY].start = entry_start;
     tree->action_vtables[ENTRY].stop = entry_stop;
@@ -392,6 +393,27 @@ void *behaviour_tree_create(const char *log_path, uint8_t flags)
     return tree;
 }
 
+void _behaviour_tree_add_child(void *p_behaviour_tree, void *p_node) {
+    behaviour_tree_t *tree = p_behaviour_tree;
+
+    tree->nodes = realloc(tree->nodes, sizeof(node_t *) * (tree->node_c + 1));
+    tree->nodes[tree->node_c] = p_node;
+    tree->node_c++;
+}
+
+void behaviour_tree_reset(void *p_behaviour_tree) {
+    behaviour_tree_t *tree = p_behaviour_tree;
+    for(int i = 0; i < tree->node_c; i++) {
+        node_t *n = tree->nodes[i];
+        if (CHECK_FLAG(n->flags, IS_CONTROL)) n->control->child_index = 0;
+        if (n->type == ENTRY) CLR_FLAG(n->flags, IS_HALTED);
+        n->state = UNINITIALISED;
+        CLR_FLAG(n->flags, HAS_RAN);
+        CLR_FLAG(n->flags, IS_RUNNING);
+    }
+    CLR_FLAG(tree->flags, IS_HALTED);
+}
+
 void behaviour_tree_move(void *p_behaviour_tree, void *p_node)
 {
     behaviour_tree_t *tree = p_behaviour_tree;
@@ -410,6 +432,8 @@ void behaviour_tree_set_root(void *p_behaviour_tree, void *p_root_node)
 
     behaviour_tree_move(tree, p_root_node);
     SET_FLAG(tree->flags, ROOT_SET);
+
+    _behaviour_tree_add_child(tree, p_root_node);
 }
 
 void behaviour_tree_tick(void *p_behaviour_tree)

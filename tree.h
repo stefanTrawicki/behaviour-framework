@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <math.h>
 
 /* Macros for failing, running and succeeding a given node. */
 #define FAIL(NODE) ({NODE->state = FAILED; NODE->state_fns->failure(NODE); return; })
@@ -103,8 +104,8 @@ typedef struct node
 
 typedef struct control_structure
 {
-    uint16_t child_index;
-    uint16_t child_count;
+    int child_index;
+    int child_count;
     node_t **child_list;
 } control_structure_t;
 
@@ -115,6 +116,9 @@ typedef struct behaviour_tree
 
     uint8_t flags;
     char* log_path;
+
+    int node_c;
+    node_t **nodes;
 
     node_t *root_node;
     node_t *current_node;
@@ -131,6 +135,8 @@ void behaviour_tree_set_root(void *p_behaviour_tree, void *p_root_node);
 void behaviour_tree_move(void *p_behaviour_tree, void *p_node);
 void behaviour_tree_tick(void *p_behaviour_tree);
 void _behaviour_tree_enable_logging(void *p_behaviour_tree, const char* path);
+void _behaviour_tree_add_child(void *p_behaviour_tree, void *p_node);
+void behaviour_tree_reset(void *p_behaviour_tree);
 
 /* Node Functions
     node_create: creates a node, configures it, returns pointer.
@@ -141,24 +147,24 @@ void *node_create(const char *label, void *p_parent_node, enum node_type type, u
 void leaf_configure(void *p_node, void *p_subject, void *p_action_funcs);
 void *_node_add_to_parent(void *p_node);
 
-// void general_failure(void *p_node);
-// void general_success(void *p_node);
-// void general_running(void *p_node);
+void general_failure(void *p_node);
+void general_success(void *p_node);
+void general_running(void *p_node);
 
-// void entry_start(void *p_node);
-// void entry_stop(void *p_node);
-// void entry_tick(void *p_node);
+void entry_start(void *p_node);
+void entry_stop(void *p_node);
+void entry_tick(void *p_node);
 
-// void sequence_start(void *p_node);
-// void sequence_stop(void *p_node);
-// void sequence_tick(void *p_node);
+void sequence_start(void *p_node);
+void sequence_stop(void *p_node);
+void sequence_tick(void *p_node);
 
-// void fallback_start(void *p_node);
-// void fallback_stop(void *p_node);
-// void fallback_tick(void *p_node);
+void fallback_start(void *p_node);
+void fallback_stop(void *p_node);
+void fallback_tick(void *p_node);
 
-// void inverter_start(void *p_node);
-// void inverter_stop(void *p_node);
-// void inverter_tick(void *p_node);
+void inverter_start(void *p_node);
+void inverter_stop(void *p_node);
+void inverter_tick(void *p_node);
 
 #endif // TREE_H
