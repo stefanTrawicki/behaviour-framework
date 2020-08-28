@@ -43,8 +43,10 @@
 #define END_STATE 0x08
 
 /* Macro to check logging is enabled, and to log a string to the trees file. */
-#define LOGGING(NODE) ({ CHECK_FLAG(NODE->tree->flags, IS_LOGGING); })
-#define LOG(NODE, MSG) ({ if (LOGGING(NODE)) { FILE *f = fopen(NODE->tree->log_path, "a"); fprintf(f, "%s\n", MSG); fclose(f);} })
+
+char* log_path;
+#define CLEAR_LOG() ( {if(log_path) { FILE *f = fopen(log_path, "w"); fprintf(f, ""); fclose(f);}})
+#define LOG(...) ( {if(log_path) { const char* lp = (const char*)log_path; FILE *f = fopen(lp, "a"); fprintf(f, __VA_ARGS__); fprintf(f, "\n"); fclose(f); }} )
 
 typedef void (*function_t)(void *p_node);
 

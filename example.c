@@ -6,9 +6,7 @@ void start(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "started leaf node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("started leaf node '%s'", node->label);
 
     SET_FLAG(node->flags, IS_RUNNING);
     behaviour_tree_move(node->tree, node);
@@ -18,9 +16,7 @@ void stop(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "stopped leaf node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("stopped leaf node '%s'", node->label);
 
     behaviour_tree_move(node->tree, node->parent);
 }
@@ -30,9 +26,7 @@ void tick1(void *p_node)
     node_t *node = p_node;
     int *p_s = node->subject;
     
-    char node_data[100];
-    sprintf(node_data, "ticked leaf node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("ticked leaf node '%s'", node->label);
 
     (*p_s)++;
 
@@ -49,9 +43,7 @@ void tick2(void *p_node)
     node_t *node = p_node;
     int *p_s = node->subject;
     
-    char node_data[100];
-    sprintf(node_data, "ticked leaf node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("ticked leaf node '%s'", node->label);
 
     (*p_s)++;
 
@@ -89,15 +81,22 @@ int run_tree(void *t) {
     behaviour_tree_reset(tree);
     Subject = 0;
 
-    char node_data[100];
-    sprintf(node_data, "\n\n\n");
-    LOG(tree->root_node, node_data);
+    // char node_data[100];
+    // sprintf(node_data, "\n\n\n");
+    // LOG(tree->root_node, node_data);
+    FILE *f = fopen(tree->root_node->tree->log_path, "a");
+    LOG("\n\n\n");
+    fclose(f);
 
     return out;
 }
 
 int main(int argc, char **argv)
 {
+    if (argc > 1) {
+        log_path = argv[1];
+    }
+
     int options = 3;
     int l[options];
 

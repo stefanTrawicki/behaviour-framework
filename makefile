@@ -11,6 +11,10 @@ example: tree.o
 	@echo "\n--Example--\n"
 	@./example
 
+log: tree.o
+	@echo "\n--Example--\n"
+	@./example log.txt
+
 tree.o:
 	$(CC) $(CFLAGS) -c tree.c
 	$(CC) $(CFLAGS) example.c -c

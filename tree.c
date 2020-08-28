@@ -22,11 +22,7 @@ void *_node_add_to_parent(void *p_node)
     parent_c->child_list[parent_c->child_count] = p_node;
     parent_c->child_count++;
 
-    char node_data[100];
-    sprintf(node_data, "added '%s' to '%s' as child %d", ((node_t *)p_node)->label,
-            parent->label,
-            parent->control->child_count);
-    LOG(parent, node_data);
+    LOG("added '%s' to '%s' as child %d", ((node_t *)p_node)->label, parent->label, parent->control->child_count);
 
     node_t *node = p_node;
     node->tree = parent->tree;
@@ -73,9 +69,7 @@ void *node_create(const char *label, void *p_parent_node, enum node_type type, u
     if (p_parent_node) _node_add_to_parent(node);
 
     if (type != ENTRY) {
-        char node_data[100];
-        sprintf(node_data, "created node '%s'", node->label);
-        LOG(node, node_data);
+        LOG("created node '%s'", node->label);
     }
 
     return node;
@@ -87,20 +81,16 @@ void leaf_configure(void *p_node, void *p_subject, void *p_action_funcs)
     node->subject = p_subject;
     node->action_fns = p_action_funcs;
 
-    char node_data[100];
-    sprintf(node_data, "leaf '%s' subject = %p, actions = %p", node->label,
+    LOG("leaf '%s' subject = %p, actions = %p", node->label,
             node->subject,
             node->action_fns);
-    LOG(node, node_data);
 }
 
 void entry_start(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "started entry node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("started entry node '%s'", node->label);
 
     SET_FLAG(node->flags, IS_RUNNING);
 }
@@ -109,9 +99,7 @@ void entry_stop(void *p_node)
 {
     node_t *node = p_node;
     
-    char node_data[100];
-    sprintf(node_data, "stopped entry node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("stopped entry node '%s'", node->label);
 
     SET_FLAG(node->tree->flags, IS_HALTED);
     SET_FLAG(node->flags, HAS_RAN);
@@ -122,9 +110,7 @@ void entry_tick(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "ticked entry node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("ticked entry node '%s'", node->label);
 
     if (node->control->child_count > 0)
     {
@@ -153,9 +139,7 @@ void sequence_start(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "started sequence node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("started sequence node '%s'", node->label);
 
     SET_FLAG(node->flags, IS_RUNNING);
 }
@@ -164,9 +148,7 @@ void sequence_stop(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "stopped sequence node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("stopped sequence node '%s'", node->label);
 
     behaviour_tree_move(node->tree, node->parent);
 }
@@ -175,9 +157,7 @@ void sequence_tick(void *p_node)
 {
     node_t *node = p_node;
     
-    char node_data[100];
-    sprintf(node_data, "ticked sequence node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("ticked sequence node '%s'", node->label);
 
     if (node->control->child_count > 0)
     {
@@ -214,9 +194,7 @@ void fallback_start(void *p_node)
 {
     node_t *node = p_node;
     
-    char node_data[100];
-    sprintf(node_data, "started fallback node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("started fallback node '%s'", node->label);
 
     SET_FLAG(node->flags, IS_RUNNING);
 }
@@ -225,9 +203,7 @@ void fallback_stop(void *p_node)
 {
     node_t *node = p_node;
     
-    char node_data[100];
-    sprintf(node_data, "stopped fallback node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("stopped fallback node '%s'", node->label);
 
     behaviour_tree_move(node->tree, node->parent);
 }
@@ -236,9 +212,7 @@ void fallback_tick(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "ticked fallback node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("ticked fallback node '%s'", node->label);
 
     if (node->control->child_count > 0)
     {
@@ -271,9 +245,7 @@ void inverter_start(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "started inverter node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("started inverter node '%s'", node->label);
 
     SET_FLAG(node->flags, IS_RUNNING);
 }
@@ -282,9 +254,7 @@ void inverter_stop(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "stopped inverter node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("stopped inverter node '%s'", node->label);
 
     behaviour_tree_move(node->tree, node->parent);
 }
@@ -293,9 +263,7 @@ void inverter_tick(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "ticked inverter node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("ticked inverter node '%s'", node->label);
 
     if (node->control->child_count > 0)
     {
@@ -324,9 +292,7 @@ void general_failure(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "failed leaf node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("failed leaf node '%s'", node->label);
 
     SET_FLAG(node->flags, HAS_RAN);
     CLR_FLAG(node->flags, IS_RUNNING);
@@ -336,9 +302,7 @@ void general_success(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "successful leaf node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("successful leaf node '%s'", node->label);
 
     SET_FLAG(node->flags, HAS_RAN);
     CLR_FLAG(node->flags, IS_RUNNING);
@@ -348,9 +312,7 @@ void general_running(void *p_node)
 {
     node_t *node = p_node;
 
-    char node_data[100];
-    sprintf(node_data, "running node '%s'", node->label);
-    LOG(node, node_data);
+    LOG("running node '%s'", node->label);
 }
 
 void *behaviour_tree_create(const char *log_path, uint8_t flags)
