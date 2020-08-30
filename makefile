@@ -16,13 +16,14 @@ log: tree.o
 	@./example log.txt
 
 tree.o:
-	$(CC) $(CFLAGS) -c tree.c
+	$(CC) $(CFLAGS) tree.c -c
 	$(CC) $(CFLAGS) example.c -c
 	$(CC) $(CFLAGS) tree.o example.o -o example
 
 clean:
 	rm -rf tree.dSYM
-	rm tree.o
-	rm example.o
-	rm example
-	rm log.txt
+	rm -f tree.o
+	rm -f tree
+	rm -f example.o
+	rm -f example
+	rm -f log.txt
