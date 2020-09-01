@@ -33,11 +33,8 @@ ActionVtable_t leaf_failure = {
 
 int main(int argc, char **argv) {
 
-    if (argc > 1) {
-        log_set_path(argv[1]);
-    }
-
-    int subject = 5;
+    if (argc > 1) log_set_path(argv[1]);
+    else printf("No log found, logging disabled\n");
 
     Node_t leaf1;
     node_create(&leaf1, LEAF);
@@ -69,7 +66,7 @@ int main(int argc, char **argv) {
     BTree_t tree;
     b_tree_create(&tree);
     b_tree_set_root(&tree, &entry);
-    printf("%d\n", b_tree_run(&tree));
+    printf("tree evaluated to %d\n", b_tree_run(&tree));
 
     return 0;
 }

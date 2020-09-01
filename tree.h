@@ -43,6 +43,7 @@
 #define CLEAR_LOG() ({if(log_path){FILE *f = fopen(log_path, "w"); fprintf(f, ""); fclose(f);} })
 #define LOG(...) ({if(log_path){const char* const_log_path = (const char*)log_path; FILE *f = fopen(const_log_path, "a"); fprintf(f, __VA_ARGS__); fprintf(f, "\n"); fclose(f);} })
 #define LABEL_LOG(NODE, ...) ({if(log_path){const char* const_log_path = (const char*)log_path; FILE *f = fopen(const_log_path, "a"); if(CHECK_FLAG(NODE->flags, IS_LABELLED))fprintf(f, "[%s] ", NODE->label); fprintf(f, __VA_ARGS__); fprintf(f, "\n"); fclose(f);} })
+#define TYPE_LABEL ((char const*[]){ "entry", "sequence", "fallback", "inverter", "leaf" })
 
 /* ------------------------------- Assertions ------------------------------- */
 
@@ -160,28 +161,14 @@ void b_tree_set_root(BTree_t *tree, Node_t *node);
 void b_tree_move(BTree_t *tree, Node_t *node);
 void b_tree_reset(BTree_t *tree);
 
-/* ------------------------ Standard state functions ------------------------ */
+/* --------------------------- Standard functions --------------------------- */
 
 void std_success(Node_t *node);
 void std_failure(Node_t *node);
 void std_running(Node_t *node);
-
-/* ---------------------------- Action functions ---------------------------- */
-
-void entry_start(Node_t *node);
-void entry_tick(Node_t *node);
-void entry_stop(Node_t *node);
-
-void sequence_start(Node_t *node);
-void sequence_tick(Node_t *node);
-void sequence_stop(Node_t *node);
-
-void fallback_start(Node_t *node);
-void fallback_tick(Node_t *node);
-void fallback_stop(Node_t *node);
-
-void inverter_start(Node_t *node);
-void inverter_tick(Node_t *node);
-void inverter_stop(Node_t *node);
+void std_start(Node_t *node);
+void std_stop(Node_t *node);
+void std_decorator_handler(Node_t *node);
+void std_composite_handler(Node_t *node);
 
 #endif // TREE_H

@@ -30,7 +30,8 @@ void *list_get(List_t *list, uint32_t index)
     return list->arr[index];
 }
 
-void* list_current(List_t *list) {
+void *list_current(List_t *list)
+{
     return list_get(list, list->index);
 }
 
@@ -81,38 +82,20 @@ void node_create(Node_t *node, NodeType_e t)
         node->children = malloc(sizeof(Node_t));
         list_create(node->children);
         if (t == INVERTER || t == ENTRY)
-            SET_FLAG(node->flags, IS_DECORATOR);
-        if (t == FALLBACK || t == SEQUENCE)
-            SET_FLAG(node->flags, IS_COMPOSITE);
-
-        switch (t)
         {
-        case ENTRY:
-            node->action_vtable->start = entry_start;
-            node->action_vtable->stop = entry_stop;
-            node->action_vtable->tick = entry_tick;
-            break;
-        case SEQUENCE:
-            node->action_vtable->start = sequence_start;
-            node->action_vtable->stop = sequence_stop;
-            node->action_vtable->tick = sequence_tick;
-            break;
-        case FALLBACK:
-            node->action_vtable->start = fallback_start;
-            node->action_vtable->stop = fallback_stop;
-            node->action_vtable->tick = fallback_tick;
-            break;
-        case INVERTER:
-            node->action_vtable->start = inverter_start;
-            node->action_vtable->stop = inverter_stop;
-            node->action_vtable->tick = inverter_tick;
-            break;
-        default:
-            break;
+            SET_FLAG(node->flags, IS_DECORATOR);
+            node->action_vtable->tick = std_decorator_handler;
         }
+        if (t == FALLBACK || t == SEQUENCE)
+        {
+            SET_FLAG(node->flags, IS_COMPOSITE);
+            node->action_vtable->tick = std_composite_handler;
+        }
+        node->action_vtable->start = std_start;
+        node->action_vtable->stop = std_stop;
     }
 
-    LOG("created node %p of type %d", node, node->type);
+    LOG("created node %p of type %s", node, TYPE_LABEL[node->type]);
 }
 
 void node_set_label(Node_t *node, const char *label)
@@ -208,11 +191,13 @@ uint32_t b_tree_run(BTree_t *tree)
 void _b_tree_add_node(BTree_t *tree, Node_t *node)
 {
     ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_INITIALISED), "Tree is not initialised");
-
-    list_add(tree->nodes, node);
-    node->tree = tree;
-
-    LOG("tree %p added node %p", tree, node);
+    if (!CHECK_FLAG(node->flags, IS_IN_TREE))
+    {
+        list_add(tree->nodes, node);
+        node->tree = tree;
+        SET_FLAG(node->flags, IS_IN_TREE);
+        LOG("tree %p added node %p", tree, node);
+    }
 }
 
 void b_tree_set_root(BTree_t *tree, Node_t *node)
@@ -255,12 +240,11 @@ void b_tree_reset(BTree_t *tree)
 void b_tree_move(BTree_t *tree, Node_t *node)
 {
     LABEL_LOG(node, "tree %p moved focus to node %p", tree, node);
-
     tree->current_node = node;
     _b_tree_add_node(tree, node);
 }
 
-/* ------------------------ Standard state functions ------------------------ */
+/* --------------------------- Standard functions --------------------------- */
 
 void std_success(Node_t *node)
 {
@@ -274,125 +258,73 @@ void std_failure(Node_t *node)
 }
 void std_running(Node_t *node)
 {
-    LABEL_LOG(node, "node %p was run", node);
+    LABEL_LOG(node, "node %p is running", node);
 }
 
-/* ---------------------------- Action functions ---------------------------- */
-
-/* ---------------------------------- Entry --------------------------------- */
-
-void entry_start(Node_t *node)
+void std_start(Node_t *node)
 {
-    ASSERT_MSG(list_get_c(node->children) != 1, "Entry needs children === 1 to start");
-    LABEL_LOG(node, "started entry node %p", node);
-    SET_FLAG(node->flags, IS_RUNNING);
+    if (CHECK_FLAG(node->flags, IS_DECORATOR))
+        ASSERT_MSG(list_get_c(node->children) != 1, "Decorators need children === 1 to start");
+    else if (CHECK_FLAG(node->flags, IS_COMPOSITE))
+        ASSERT_MSG(list_get_c(node->children) <= 1, "Composites need children > 1 to start");
+    LABEL_LOG(node, "started %s node %p", TYPE_LABEL[node->type], node);
+    START(node);
 }
 
-void entry_tick(Node_t *node)
+void std_stop(Node_t *node)
 {
-    LABEL_LOG(node, "ticked entry node %p", node);
+    LABEL_LOG(node, "stopped %s node %p", TYPE_LABEL[node->type], node);
+    FINISH(node);
+    if (node->type != ENTRY)
+        b_tree_move(node->tree, node->parent);
+    else
+        SET_FLAG(node->tree->flags, IS_HALTED);
+}
+
+void std_decorator_handler(Node_t *node)
+{
+    LABEL_LOG(node, "ticked %s node %p", TYPE_LABEL[node->type], node);
 
     Node_t *child = list_get(node->children, 0);
     if (child->state == UNDETERMINED)
+    {
         b_tree_move(node->tree, child);
+        RUN(node);
+    }
     else
-        child->state == SUCCESS ? SUCCEED(node) : FAIL(node);
+    {
+        uint8_t passed = (child->state == SUCCESS);
+        if (node->type == ENTRY)
+            passed ? SUCCEED(node) : FAIL(node);
+        else
+            passed ? FAIL(node) : SUCCEED(node);
+    }
 }
 
-void entry_stop(Node_t *node)
+void std_composite_handler(Node_t *node)
 {
-    LABEL_LOG(node, "stopped entry node %p", node);
-    SET_FLAG(node->tree->flags, IS_HALTED);
-}
-
-/* -------------------------------- Sequence -------------------------------- */
-
-void sequence_start(Node_t *node)
-{
-    LABEL_LOG(node, "started sequence node %p", node);
-    START(node);
-}
-void sequence_tick(Node_t *node)
-{
-    ASSERT_MSG(!(list_get_c(node->children) > 0), "Sequence requires at least 1 child");
-    LABEL_LOG(node, "ticked sequence node %p", node);
+    LABEL_LOG(node, "ticked %s node %p", TYPE_LABEL[node->type], node);
 
     for (uint32_t i = 0; i < list_get_c(node->children); i++)
     {
         Node_t *child = list_get(node->children, i);
 
-        if (child->state == FAIL) {
+        if (child->state == UNDETERMINED)
+        {
+            b_tree_move(node->tree, child);
+            RUN(node);
+        }
+        else if (child->state == FAIL && node->type == SEQUENCE)
+        {
             b_tree_move(node->tree, node->parent);
             FAIL(node);
-        } else if (child->state == UNDETERMINED) {
-            b_tree_move(node->tree, child);
-            RUN(node);
         }
-    }
-
-    b_tree_move(node->tree, node->parent);
-    SUCCEED(node);
-}
-void sequence_stop(Node_t *node)
-{
-    LABEL_LOG(node, "stopped sequence node %p", node);
-    b_tree_move(node->tree, node->parent);
-}
-
-/* -------------------------------- Fallback -------------------------------- */
-
-void fallback_start(Node_t *node)
-{
-    LABEL_LOG(node, "started fallback node %p", node);
-    START(node);
-}
-void fallback_tick(Node_t *node)
-{
-    ASSERT_MSG(!(list_get_c(node->children) > 0), "Fallback requires at least 1 child");
-    LABEL_LOG(node, "ticked fallback node %p", node);
-
-    for (uint32_t i = 0; i < list_get_c(node->children); i++)
-    {
-        Node_t *child = list_get(node->children, i);
-
-        if (child->state == SUCCESS) {
+        else if (child->state == SUCCESS && node->type == FALLBACK)
+        {
             b_tree_move(node->tree, node->parent);
             SUCCEED(node);
-        } else if (child->state == UNDETERMINED) {
-            b_tree_move(node->tree, child);
-            RUN(node);
         }
     }
-
     b_tree_move(node->tree, node->parent);
-    FAIL(node);
-}
-void fallback_stop(Node_t *node)
-{
-    LABEL_LOG(node, "stopped fallback node %p", node);
-    b_tree_move(node->tree, node->parent);
-}
-
-/* -------------------------------- Inverter -------------------------------- */
-
-void inverter_start(Node_t *node)
-{
-    ASSERT_MSG(list_get_c(node->children) != 1, "Inverter needs children === 1 to start");
-    LABEL_LOG(node, "started inverter node %p", node);
-    SET_FLAG(node->flags, IS_RUNNING);
-}
-void inverter_tick(Node_t *node)
-{
-    LABEL_LOG(node, "ticked inverter node %p", node);
-
-    Node_t *child = list_get(node->children, 0);
-    if (child->state == UNDETERMINED)
-        b_tree_move(node->tree, child);
-    else
-        child->state == SUCCESS ? FAIL(node) : SUCCEED(node);
-}
-void inverter_stop(Node_t *node)
-{
-    LABEL_LOG(node, "stopped inverter node %p", node);
-    b_tree_move(node->tree, node->parent);
+    (node->type == SEQUENCE) ? SUCCEED(node) : FAIL(node);
 }
