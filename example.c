@@ -1,4 +1,4 @@
-#include "tree.h"
+#include <behaviourtree.h>
 
 void start(Node_t *node) {
     LABEL_LOG(node, "node %p started", node);

@@ -1,29 +1,25 @@
 CC=clang
-CFLAGS = -g #-Wall -Werror
-
-all: tree.o
-
-debug: tree.o
-	@echo "\n--Debug--\n"
-	@lldb example
-
-example: tree.o
-	@echo "\n--Example--\n"
-	@./example
-
-log: tree.o
-	@echo "\n--Example--\n"
-	@./example log.txt
-
-tree.o:
-	$(CC) $(CFLAGS) tree.c -c
-	$(CC) $(CFLAGS) example.c -c
-	$(CC) $(CFLAGS) tree.o example.o -o example
+CFLAGS=-Wall -g
+BINS=libmylist.dylib libbehaviourtree.dylib example
 
 clean:
-	rm -rf tree.dSYM
-	rm -f tree.o
-	rm -f tree
-	rm -f example.o
-	rm -f example
-	rm -f log.txt
+	rm -f *.o
+	rm -rf *.dSYM
+	rm -rf *.dylib
+
+libmylist.dylib: libs/mylist.c libs/mylist.h
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ libs/mylist.c
+	cp libmylist.dylib /usr/local/lib
+	cp libs/mylist.h /usr/local/include
+
+libbehaviourtree.dylib: libs/behaviourtree.c libs/behaviourtree.h
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ libs/behaviourtree.c -L. -lmylist
+	cp libbehaviourtree.dylib /usr/local/lib
+	cp libs/behaviourtree.h /usr/local/include
+
+install: libbehaviourtree.dylib libmylist.dylib clean
+
+example: install
+	$(CC) $(CFLAGS) -o example example.c -lbehaviourtree
+	@echo "Example\n"
+	./example "log.txt"
