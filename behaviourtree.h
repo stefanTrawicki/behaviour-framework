@@ -3,7 +3,7 @@
 
 /* --------------------------------- Imports -------------------------------- */
 
-#include <mylist.h>
+#include <libpointerlist.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -112,7 +112,7 @@ typedef struct Node
 
     BTree_t *tree;
     Node_t *parent;
-    List_t *children;
+    void_list_t *children;
 
     char *label;
 } Node_t;
@@ -129,7 +129,7 @@ typedef struct BTree
 {
     uint8_t flags;
 
-    List_t *nodes;
+    void_list_t *nodes;
 
     Node_t *root_node;
     Node_t *current_node;

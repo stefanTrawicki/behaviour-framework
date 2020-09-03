@@ -37,8 +37,8 @@ void node_create(Node_t *node, NodeType_e t)
 
     if (t != LEAF)
     {
-        node->children = malloc(sizeof(Node_t));
-        list_create(node->children);
+        node->children = create_list();
+        
         if (t == INVERTER || t == ENTRY)
         {
             SET_FLAG(node->flags, IS_DECORATOR);
@@ -96,11 +96,11 @@ void node_add_child(Node_t *parent, Node_t *child)
     uint8_t is_decorator = CHECK_FLAG(parent->flags, IS_DECORATOR);
     ASSERT_MSG(!is_composite && !is_decorator, "Parent is of incorrect type");
 
-    ASSERT_MSG(is_decorator && parent->children->count == 1, "Decorator cannot have > 1 child");
+    ASSERT_MSG(is_decorator && length(parent->children) == 1, "Decorator cannot have > 1 child");
 
     child->parent = parent;
 
-    list_add(parent->children, (void *)child);
+    add(parent->children, child);
 
     LABEL_LOG(parent, "node %p added child %p", parent, child);
 }
@@ -112,8 +112,7 @@ void b_tree_create(BTree_t *tree)
     memset(tree, 0, sizeof(BTree_t));
 
     SET_FLAG(tree->flags, IS_INITIALISED);
-    tree->nodes = malloc(sizeof(List_t));
-    list_create(tree->nodes);
+    tree->nodes = create_list();
 
     LOG("tree %p created", tree);
 }
@@ -151,7 +150,7 @@ void _b_tree_add_node(BTree_t *tree, Node_t *node)
     ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_INITIALISED), "Tree is not initialised");
     if (!CHECK_FLAG(node->flags, IS_IN_TREE))
     {
-        list_add(tree->nodes, node);
+        add(tree->nodes, node);
         node->tree = tree;
         SET_FLAG(node->flags, IS_IN_TREE);
         LOG("tree %p added node %p", tree, node);
@@ -177,21 +176,18 @@ void b_tree_reset(BTree_t *tree)
 
     LOG("tree %p reset", tree);
 
-    uint32_t i = 0;
-    while (list_is_next(tree->nodes))
-    {
-        Node_t *node = list_next(tree->nodes);
+    while (is_next(tree->nodes)) {
+        Node_t *node = get_next(tree->nodes);
 
         CLEAR_FLAG(node->flags, IS_RUNNING);
         CLEAR_FLAG(node->flags, IS_FINISHED);
 
         if (CHECK_FLAG(node->flags, IS_COMPOSITE) || CHECK_FLAG(node->flags, IS_DECORATOR))
         {
-            node->children->index = 0;
+            reset_index(tree->nodes);
         }
 
         LOG("tree %p reset node %p", tree, node);
-        i++;
     }
 }
 
@@ -222,9 +218,9 @@ void std_running(Node_t *node)
 void std_start(Node_t *node)
 {
     if (CHECK_FLAG(node->flags, IS_DECORATOR))
-        ASSERT_MSG(list_get_c(node->children) != 1, "Decorators need children === 1 to start");
+        ASSERT_MSG(length(node->children) != 1, "Decorators need children === 1 to start");
     else if (CHECK_FLAG(node->flags, IS_COMPOSITE))
-        ASSERT_MSG(list_get_c(node->children) <= 1, "Composites need children > 1 to start");
+        ASSERT_MSG(length(node->children) <= 1, "Composites need children > 1 to start");
     LABEL_LOG(node, "started %s node %p", TYPE_LABEL[node->type], node);
     START(node);
 }
@@ -243,7 +239,7 @@ void std_decorator_handler(Node_t *node)
 {
     LABEL_LOG(node, "ticked %s node %p", TYPE_LABEL[node->type], node);
 
-    Node_t *child = list_get(node->children, 0);
+    Node_t *child = get(node->children, 0);
     if (child->state == UNDETERMINED)
     {
         b_tree_move(node->tree, child);
@@ -263,9 +259,9 @@ void std_composite_handler(Node_t *node)
 {
     LABEL_LOG(node, "ticked %s node %p", TYPE_LABEL[node->type], node);
 
-    for (uint32_t i = 0; i < list_get_c(node->children); i++)
+    for (uint32_t i = 0; i < length(node->children); i++)
     {
-        Node_t *child = list_get(node->children, i);
+        Node_t *child = get(node->children, i);
 
         if (child->state == UNDETERMINED)
         {

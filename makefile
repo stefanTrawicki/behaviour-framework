@@ -1,23 +1,20 @@
 CC=clang
 CFLAGS=-Wall -g
-BINS=libmylist.dylib libbehaviourtree.dylib example
+BINS=libbehaviourtree.dylib
 
 clean:
-	rm -f *.o
+	rm -f *.o *.txt example
 	rm -rf *.dSYM
 	rm -rf *.dylib
 
-libmylist.dylib: libs/mylist.c libs/mylist.h
-	$(CC) $(CFLAGS) -fPIC -shared -o $@ libs/mylist.c
-	cp libmylist.dylib /usr/local/lib
-	cp libs/mylist.h /usr/local/include
-
-libbehaviourtree.dylib: libs/behaviourtree.c libs/behaviourtree.h
-	$(CC) $(CFLAGS) -fPIC -shared -o $@ libs/behaviourtree.c -L. -lmylist
+libbehaviourtree.dylib: behaviourtree.c behaviourtree.h
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ behaviourtree.c -L. -lpointerlist
+	rm -f /usr/local/lib/libbehaviourtree.dylib
 	cp libbehaviourtree.dylib /usr/local/lib
-	cp libs/behaviourtree.h /usr/local/include
+	rm -f /usr/local/include/behaviourtree.h
+	cp behaviourtree.h /usr/local/include
 
-install: libbehaviourtree.dylib libmylist.dylib clean
+install: libbehaviourtree.dylib clean
 
 example: install
 	$(CC) $(CFLAGS) -o example example.c -lbehaviourtree
