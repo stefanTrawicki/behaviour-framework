@@ -8,15 +8,13 @@ clean:
 	rm -rf *.dylib
 
 libbehaviourtree.dylib: behaviourtree.c behaviourtree.h
-	$(CC) $(CFLAGS) -fPIC -shared -o $@ behaviourtree.c -L. -lpointerlist
+	$(CC) $(CFLAGS) -fPIC -shared -o $@ behaviourtree.c -lpointerlist -lpointerstack
 	rm -f /usr/local/lib/libbehaviourtree.dylib
 	cp libbehaviourtree.dylib /usr/local/lib
 	rm -f /usr/local/include/behaviourtree.h
 	cp behaviourtree.h /usr/local/include
 
-install: libbehaviourtree.dylib clean
+install: libbehaviourtree.dylib
 
 example: install
-	$(CC) $(CFLAGS) -o example example.c -lbehaviourtree
-	@echo "Example\n"
-	./example "log.txt"
+	$(CC) $(CFLAGS) -o example example.c -lbehaviourtree -lpointerlist

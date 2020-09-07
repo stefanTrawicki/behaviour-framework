@@ -38,7 +38,7 @@ void node_create(Node_t *node, NodeType_e t)
     if (t != LEAF)
     {
         node->children = create_list();
-        
+
         if (t == INVERTER || t == ENTRY)
         {
             SET_FLAG(node->flags, IS_DECORATOR);
@@ -176,15 +176,20 @@ void b_tree_reset(BTree_t *tree)
 
     LOG("tree %p reset", tree);
 
-    while (is_next(tree->nodes)) {
+    reset_index(tree->nodes);
+    CLEAR_FLAG(tree->flags, IS_HALTED);
+
+    while (is_next(tree->nodes))
+    {
         Node_t *node = get_next(tree->nodes);
 
         CLEAR_FLAG(node->flags, IS_RUNNING);
         CLEAR_FLAG(node->flags, IS_FINISHED);
+        node->state = UNDETERMINED;
 
         if (CHECK_FLAG(node->flags, IS_COMPOSITE) || CHECK_FLAG(node->flags, IS_DECORATOR))
         {
-            reset_index(tree->nodes);
+            reset_index(node->children);
         }
 
         LOG("tree %p reset node %p", tree, node);
@@ -195,7 +200,42 @@ void b_tree_move(BTree_t *tree, Node_t *node)
 {
     LABEL_LOG(node, "tree %p moved focus to node %p", tree, node);
     tree->current_node = node;
-    _b_tree_add_node(tree, node);
+}
+
+void_list_t *b_tree_discover(BTree_t *tree)
+{
+    if (CHECK_FLAG(tree->flags, IS_ROOT_SET))
+    {
+        void_stack_t *stack = create_stack();
+        void_list_t *visited_nodes = create_list();
+
+        push(stack, tree->root_node);
+        while (stack_size(stack) > 0)
+        {
+            Node_t *node = stack_head(stack);
+            if (node->type == LEAF || !is_next(node->children)) {
+                add(visited_nodes, pop(stack));
+                continue;
+            }
+            while (is_next(node->children)) {
+                Node_t *child = get_next(node->children);
+                push(stack, child);
+            }
+        }
+
+        for (int i = 0; i < length(visited_nodes); i++) {
+            Node_t *n = get(visited_nodes, i);
+            _b_tree_add_node(tree, n);
+            if (n->children) reset_index(n->children);
+        }
+        return visited_nodes;
+
+    }
+    else
+    {
+        printf("Tree must have root set to discover nodes\n");
+        return (void *)0;
+    }
 }
 
 /* --------------------------- Standard functions --------------------------- */

@@ -4,6 +4,7 @@
 /* --------------------------------- Imports -------------------------------- */
 
 #include <libpointerlist.h>
+#include <libpointerstack.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -142,6 +143,7 @@ void b_tree_create(BTree_t *tree);
 uint32_t b_tree_run(BTree_t *tree);
 void _b_tree_add_node(BTree_t *tree, Node_t *node);
 void b_tree_set_root(BTree_t *tree, Node_t *node);
+void_list_t *b_tree_discover(BTree_t *tree);
 void b_tree_move(BTree_t *tree, Node_t *node);
 void b_tree_reset(BTree_t *tree);
 
