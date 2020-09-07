@@ -59,9 +59,11 @@ typedef void (*Function_t)(Node_t *node);
 
 typedef struct ActionVtable
 {
+    Function_t std_start;
     Function_t start;
     Function_t tick;
     Function_t stop;
+    Function_t std_stop;
 } ActionVtable_t;
 
 typedef struct StateVtable

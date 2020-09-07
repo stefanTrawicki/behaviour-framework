@@ -34,6 +34,8 @@ void node_create(Node_t *node, NodeType_e t)
     node->state_vtable->succeed = std_success;
     node->state_vtable->fail = std_failure;
     node->state_vtable->run = std_running;
+    node->action_vtable->std_start = std_start;
+    node->action_vtable->std_stop = std_stop;
 
     if (t != LEAF)
     {
@@ -49,8 +51,6 @@ void node_create(Node_t *node, NodeType_e t)
             SET_FLAG(node->flags, IS_COMPOSITE);
             node->action_vtable->tick = std_composite_handler;
         }
-        node->action_vtable->start = std_start;
-        node->action_vtable->stop = std_stop;
     }
 
     LOG("created node %p of type %s", node, TYPE_LABEL[node->type]);
@@ -71,7 +71,11 @@ void node_set_actions(Node_t *node, ActionVtable_t *actions)
     ASSERT_MSG(!CHECK_FLAG(node->flags, IS_INITIALISED), "Node is not initialised");
     ASSERT_MSG(node->type != LEAF, "Non-leaf nodes cannot be given actions");
 
-    node->action_vtable = actions;
+    if (actions->start) node->action_vtable->start = actions->start;
+    if (actions->stop) node->action_vtable->stop = actions->stop;
+    if (actions->tick) node->action_vtable->tick = actions->tick;
+    if (actions->std_start) node->action_vtable->std_start = actions->std_start;
+    if (actions->std_stop) node->action_vtable->std_stop = actions->std_stop;
 
     LABEL_LOG(node, "node %p actions set to %p", node, actions);
 }
@@ -132,13 +136,17 @@ uint32_t b_tree_run(BTree_t *tree)
 
         if (!CHECK_FLAG(f, IS_FINISHED))
         {
-            if (!CHECK_FLAG(f, IS_RUNNING))
-                c->action_vtable->start(c);
+            if (!CHECK_FLAG(f, IS_RUNNING)) {
+                c->action_vtable->std_start(c);
+                if (c->action_vtable->start) c->action_vtable->start(c);
+            }
             else
                 c->action_vtable->tick(c);
         }
-        else
-            c->action_vtable->stop(c);
+        else {
+            if (c->action_vtable->stop) c->action_vtable->stop(c);
+            c->action_vtable->std_stop(c);
+        }
         state = (c->state == SUCCESS);
     }
 

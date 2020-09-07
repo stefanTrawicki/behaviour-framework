@@ -1,16 +1,5 @@
 #include <behaviourtree.h>
 
-void start(Node_t *node) {
-    LABEL_LOG(node, "node %p started", node);
-    START(node);
-}
-
-void stop(Node_t *node) {
-    LABEL_LOG(node, "node %p stopped", node);
-    FINISH(node);
-    b_tree_move(node->tree, node->parent);
-}
-
 void tick_succeed(Node_t *node) {
     SUCCEED(node);
 }
@@ -20,15 +9,11 @@ void tick_fail(Node_t *node) {
 }
 
 ActionVtable_t leaf_success = {
-    .start = &start,
     .tick = &tick_succeed,
-    .stop = &stop
 };
 
 ActionVtable_t leaf_failure = {
-    .start = &start,
     .tick = &tick_fail,
-    .stop = &stop
 };
 
 int main(int argc, char **argv) {
