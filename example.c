@@ -1,10 +1,22 @@
 #include <behaviourtree.h>
 
+struct blackboard_example {
+    int x;
+    char y;
+    float z;
+};
+
 void tick_succeed(Node_t *node) {
+    struct blackboard_example *b = node_get_blackboard(node);
+    printf("x %d\n", b->x);
+    b->x += 20;
     SUCCEED(node);
 }
 
 void tick_fail(Node_t *node) {
+    struct blackboard_example *b = node_get_blackboard(node);
+    printf("x %d\n", b->x);
+    printf("y %d\n", b->y);
     FAIL(node);
 }
 
@@ -33,20 +45,19 @@ int main(int argc, char **argv) {
     node_create(&entry, ENTRY);
 
     Node_t fallback;
-    node_create(&fallback, FALLBACK);
+    node_create(&fallback, SEQUENCE);
 
     node_add_child(&entry, &fallback);
     node_add_child(&fallback, &leaf1);
     node_add_child(&fallback, &leaf2);
 
+    struct blackboard_example b = {.x = 5, .y = 10};
+
     BTree_t tree;
     b_tree_create(&tree);
     b_tree_set_root(&tree, &entry);
+    b_tree_set_blackboard(&tree, &b);
     b_tree_discover(&tree);
-
-    printf("tree evaluated to %d\n", b_tree_run(&tree));
-
-    b_tree_reset(&tree);
 
     printf("tree evaluated to %d\n", b_tree_run(&tree));
 

@@ -39,6 +39,7 @@
 /* Tree Flags */
 #define IS_HALTED 0x04
 #define IS_ROOT_SET 0x05
+#define IS_BLACKBOARD_SET 0x06
 
 /* --------------------------------- Logging -------------------------------- */
 
@@ -125,6 +126,7 @@ void node_set_label(Node_t *node, const char *label);
 void node_set_actions(Node_t *node, ActionVtable_t *actions);
 void node_set_subject(Node_t *node, void *subject);
 void node_add_child(Node_t *node, Node_t *child);
+void *node_get_blackboard(Node_t *node);
 
 /* ----------------------------- Behaviour tree ----------------------------- */
 
@@ -137,6 +139,8 @@ typedef struct BTree
     Node_t *root_node;
     Node_t *current_node;
 
+    void *blackboard;
+
     ActionVtable_t std_action_vtables[_COUNT];
     StateVtable_t *std_state_vtables;
 } BTree_t;
@@ -148,6 +152,7 @@ void b_tree_set_root(BTree_t *tree, Node_t *node);
 void_list_t *b_tree_discover(BTree_t *tree);
 void b_tree_move(BTree_t *tree, Node_t *node);
 void b_tree_reset(BTree_t *tree);
+void b_tree_set_blackboard(BTree_t *tree, void *blackboard);
 
 /* --------------------------- Standard functions --------------------------- */
 

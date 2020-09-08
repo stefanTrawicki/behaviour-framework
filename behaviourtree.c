@@ -109,6 +109,12 @@ void node_add_child(Node_t *parent, Node_t *child)
     LABEL_LOG(parent, "node %p added child %p", parent, child);
 }
 
+void *node_get_blackboard(Node_t *node) {
+    ASSERT_MSG(!CHECK_FLAG(node->tree->flags, IS_BLACKBOARD_SET), "Tree blackboard not set");
+    ASSERT_MSG(!CHECK_FLAG(node->flags, IS_IN_TREE), "Node does't belong to any tree");
+    return node->tree->blackboard;
+}
+
 /* ---------------------------------- BTree --------------------------------- */
 
 void b_tree_create(BTree_t *tree)
@@ -244,6 +250,12 @@ void_list_t *b_tree_discover(BTree_t *tree)
         printf("Tree must have root set to discover nodes\n");
         return (void *)0;
     }
+}
+
+void b_tree_set_blackboard(BTree_t *tree, void *blackboard) {
+    ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_INITIALISED), "Tree isn't initialised yet");
+    tree->blackboard = blackboard;
+    SET_FLAG(tree->flags, IS_BLACKBOARD_SET);
 }
 
 /* --------------------------- Standard functions --------------------------- */
