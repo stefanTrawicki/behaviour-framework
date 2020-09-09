@@ -40,16 +40,21 @@ void node_create(Node_t *node, NodeType_e t)
     if (t != LEAF)
     {
         node->children = create_list();
-
-        if (t == INVERTER || t == ENTRY)
+        switch (t)
         {
+        case INVERTER:
+        case ENTRY:
+        case REPEATER:
             SET_FLAG(node->flags, IS_DECORATOR);
             node->action_vtable->tick = std_decorator_handler;
-        }
-        if (t == FALLBACK || t == SEQUENCE)
-        {
+            break;
+        case FALLBACK:
+        case SEQUENCE:
             SET_FLAG(node->flags, IS_COMPOSITE);
             node->action_vtable->tick = std_composite_handler;
+            break;
+        default:
+            break;
         }
     }
 
@@ -71,11 +76,16 @@ void node_set_actions(Node_t *node, ActionVtable_t *actions)
     ASSERT_MSG(!CHECK_FLAG(node->flags, IS_INITIALISED), "Node is not initialised");
     ASSERT_MSG(node->type != LEAF, "Non-leaf nodes cannot be given actions");
 
-    if (actions->start) node->action_vtable->start = actions->start;
-    if (actions->stop) node->action_vtable->stop = actions->stop;
-    if (actions->tick) node->action_vtable->tick = actions->tick;
-    if (actions->std_start) node->action_vtable->std_start = actions->std_start;
-    if (actions->std_stop) node->action_vtable->std_stop = actions->std_stop;
+    if (actions->start)
+        node->action_vtable->start = actions->start;
+    if (actions->stop)
+        node->action_vtable->stop = actions->stop;
+    if (actions->tick)
+        node->action_vtable->tick = actions->tick;
+    if (actions->std_start)
+        node->action_vtable->std_start = actions->std_start;
+    if (actions->std_stop)
+        node->action_vtable->std_stop = actions->std_stop;
 
     LABEL_LOG(node, "node %p actions set to %p", node, actions);
 }
@@ -109,7 +119,47 @@ void node_add_child(Node_t *parent, Node_t *child)
     LABEL_LOG(parent, "node %p added child %p", parent, child);
 }
 
-void *node_get_blackboard(Node_t *node) {
+void node_set_repetitions(Node_t *node, int32_t repetitions)
+{
+    ASSERT_MSG(node->type != REPEATER, "Cannot set repeitions for none repeater node");
+    ASSERT_MSG(repetitions == 0 || repetitions < -1, "Repetitions must be -1 OR > 0");
+    node->left_loops = repetitions;
+    node->start_loops = repetitions;
+}
+
+void node_reset(Node_t *node) {
+    CLEAR_FLAG(node->flags, IS_RUNNING);
+    CLEAR_FLAG(node->flags, IS_FINISHED);
+    node->state = UNDETERMINED;
+
+    if (node->type != LEAF) {
+        while (is_next(node->children)) {
+            Node_t *n = get_next(node->children);
+            node_reset(n);
+        }
+        if (node->type == REPEATER) node->left_loops = node->start_loops;
+        reset_index(node->children);
+    }
+
+    LABEL_LOG(node, "reset node %p", node);
+}
+
+void node_set_tree(Node_t *node, BTree_t *tree) {
+    node->tree = tree;
+    SET_FLAG(node->flags, IS_IN_TREE);
+    if (node->type != LEAF) {
+        while (is_next(node->children)) {
+            Node_t *n = get_next(node->children);
+            node_set_tree(n, tree);
+        }
+        reset_index(node->children);
+    }
+
+    LABEL_LOG(node, "set node %p tree to %p", node, tree);
+}
+
+void *node_get_blackboard(Node_t *node)
+{
     ASSERT_MSG(!CHECK_FLAG(node->tree->flags, IS_BLACKBOARD_SET), "Tree blackboard not set");
     ASSERT_MSG(!CHECK_FLAG(node->flags, IS_IN_TREE), "Node does't belong to any tree");
     return node->tree->blackboard;
@@ -142,33 +192,25 @@ uint32_t b_tree_run(BTree_t *tree)
 
         if (!CHECK_FLAG(f, IS_FINISHED))
         {
-            if (!CHECK_FLAG(f, IS_RUNNING)) {
+            if (!CHECK_FLAG(f, IS_RUNNING))
+            {
                 c->action_vtable->std_start(c);
-                if (c->action_vtable->start) c->action_vtable->start(c);
+                if (c->action_vtable->start)
+                    c->action_vtable->start(c);
             }
             else
                 c->action_vtable->tick(c);
         }
-        else {
-            if (c->action_vtable->stop) c->action_vtable->stop(c);
+        else
+        {
+            if (c->action_vtable->stop)
+                c->action_vtable->stop(c);
             c->action_vtable->std_stop(c);
         }
         state = (c->state == SUCCESS);
     }
 
     return state;
-}
-
-void _b_tree_add_node(BTree_t *tree, Node_t *node)
-{
-    ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_INITIALISED), "Tree is not initialised");
-    if (!CHECK_FLAG(node->flags, IS_IN_TREE))
-    {
-        add(tree->nodes, node);
-        node->tree = tree;
-        SET_FLAG(node->flags, IS_IN_TREE);
-        LOG("tree %p added node %p", tree, node);
-    }
 }
 
 void b_tree_set_root(BTree_t *tree, Node_t *node)
@@ -178,7 +220,7 @@ void b_tree_set_root(BTree_t *tree, Node_t *node)
 
     SET_FLAG(tree->flags, IS_ROOT_SET);
     tree->root_node = node;
-    node->tree = tree;
+    node_set_tree(node, tree);
     b_tree_move(tree, node);
 
     LOG("tree %p set root at %p", tree, node);
@@ -190,24 +232,9 @@ void b_tree_reset(BTree_t *tree)
 
     LOG("tree %p reset", tree);
 
-    reset_index(tree->nodes);
     CLEAR_FLAG(tree->flags, IS_HALTED);
 
-    while (is_next(tree->nodes))
-    {
-        Node_t *node = get_next(tree->nodes);
-
-        CLEAR_FLAG(node->flags, IS_RUNNING);
-        CLEAR_FLAG(node->flags, IS_FINISHED);
-        node->state = UNDETERMINED;
-
-        if (CHECK_FLAG(node->flags, IS_COMPOSITE) || CHECK_FLAG(node->flags, IS_DECORATOR))
-        {
-            reset_index(node->children);
-        }
-
-        LOG("tree %p reset node %p", tree, node);
-    }
+    node_reset(tree->root_node);
 }
 
 void b_tree_move(BTree_t *tree, Node_t *node)
@@ -216,43 +243,8 @@ void b_tree_move(BTree_t *tree, Node_t *node)
     tree->current_node = node;
 }
 
-void_list_t *b_tree_discover(BTree_t *tree)
+void b_tree_set_blackboard(BTree_t *tree, void *blackboard)
 {
-    if (CHECK_FLAG(tree->flags, IS_ROOT_SET))
-    {
-        void_stack_t *stack = create_stack();
-        void_list_t *visited_nodes = create_list();
-
-        push(stack, tree->root_node);
-        while (stack_size(stack) > 0)
-        {
-            Node_t *node = stack_head(stack);
-            if (node->type == LEAF || !is_next(node->children)) {
-                add(visited_nodes, pop(stack));
-                continue;
-            }
-            while (is_next(node->children)) {
-                Node_t *child = get_next(node->children);
-                push(stack, child);
-            }
-        }
-
-        for (int i = 0; i < length(visited_nodes); i++) {
-            Node_t *n = get(visited_nodes, i);
-            _b_tree_add_node(tree, n);
-            if (n->children) reset_index(n->children);
-        }
-        return visited_nodes;
-
-    }
-    else
-    {
-        printf("Tree must have root set to discover nodes\n");
-        return (void *)0;
-    }
-}
-
-void b_tree_set_blackboard(BTree_t *tree, void *blackboard) {
     ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_INITIALISED), "Tree isn't initialised yet");
     tree->blackboard = blackboard;
     SET_FLAG(tree->flags, IS_BLACKBOARD_SET);
@@ -298,17 +290,26 @@ void std_stop(Node_t *node)
 void std_decorator_handler(Node_t *node)
 {
     LABEL_LOG(node, "ticked %s node %p", TYPE_LABEL[node->type], node);
-
     Node_t *child = get(node->children, 0);
     if (child->state == UNDETERMINED)
     {
         b_tree_move(node->tree, child);
         RUN(node);
     }
+    else if (node->type == REPEATER &&
+             (node->left_loops == -1 || node->left_loops > 1))
+    {
+        node_reset(child);
+        b_tree_move(node->tree, child);
+        if (node->left_loops != -1)
+            node->left_loops--;
+        LABEL_LOG(node, "repeater %p has %d loops left", node, node->left_loops);
+        RUN(node);
+    }
     else
     {
         uint8_t passed = (child->state == SUCCESS);
-        if (node->type == ENTRY)
+        if (node->type == ENTRY || node->type == REPEATER)
             passed ? SUCCEED(node) : FAIL(node);
         else
             passed ? FAIL(node) : SUCCEED(node);

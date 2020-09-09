@@ -46,7 +46,7 @@
 #define CLEAR_LOG() ({if(log_path){FILE *f = fopen(log_path, "w"); fprintf(f, ""); fclose(f);} })
 #define LOG(...) ({if(log_path){const char* const_log_path = (const char*)log_path; FILE *f = fopen(const_log_path, "a"); fprintf(f, __VA_ARGS__); fprintf(f, "\n"); fclose(f);} })
 #define LABEL_LOG(NODE, ...) ({if(log_path){const char* const_log_path = (const char*)log_path; FILE *f = fopen(const_log_path, "a"); if(CHECK_FLAG(NODE->flags, IS_LABELLED))fprintf(f, "[%s] ", NODE->label); fprintf(f, __VA_ARGS__); fprintf(f, "\n"); fclose(f);} })
-#define TYPE_LABEL ((char const*[]){ "entry", "sequence", "fallback", "inverter", "leaf" })
+#define TYPE_LABEL ((char const*[]){ "entry", "sequence", "fallback", "inverter", "leaf", "repeater"})
 
 /* ------------------------------- Assertions ------------------------------- */
 
@@ -65,6 +65,7 @@ typedef struct ActionVtable
     Function_t tick;
     Function_t stop;
     Function_t std_stop;
+    Function_t evaluation;
 } ActionVtable_t;
 
 typedef struct StateVtable
@@ -90,6 +91,7 @@ typedef enum
     FALLBACK,
     INVERTER,
     LEAF,
+    REPEATER,
     _COUNT
 } NodeType_e;
 
@@ -118,6 +120,9 @@ typedef struct Node
     Node_t *parent;
     void_list_t *children;
 
+    int32_t start_loops;
+    int32_t left_loops;
+
     char *label;
 } Node_t;
 
@@ -126,6 +131,9 @@ void node_set_label(Node_t *node, const char *label);
 void node_set_actions(Node_t *node, ActionVtable_t *actions);
 void node_set_subject(Node_t *node, void *subject);
 void node_add_child(Node_t *node, Node_t *child);
+void node_set_repetitions(Node_t *node, int32_t repetitions);
+void node_reset(Node_t *node);
+void node_set_tree(Node_t *node, BTree_t *tree);
 void *node_get_blackboard(Node_t *node);
 
 /* ----------------------------- Behaviour tree ----------------------------- */
@@ -147,9 +155,7 @@ typedef struct BTree
 
 void b_tree_create(BTree_t *tree);
 uint32_t b_tree_run(BTree_t *tree);
-void _b_tree_add_node(BTree_t *tree, Node_t *node);
 void b_tree_set_root(BTree_t *tree, Node_t *node);
-void_list_t *b_tree_discover(BTree_t *tree);
 void b_tree_move(BTree_t *tree, Node_t *node);
 void b_tree_reset(BTree_t *tree);
 void b_tree_set_blackboard(BTree_t *tree, void *blackboard);
