@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
     Node_t repeater;
     node_create(&repeater, REPEATER);
-    node_set_repetitions(&repeater, 10);
+    node_set_repetitions(&repeater, 2);
 
     Node_t entry;
     node_create(&entry, ENTRY);
@@ -61,8 +61,17 @@ int main(int argc, char **argv) {
     b_tree_set_root(&tree, &entry);
     b_tree_set_blackboard(&tree, &b);
 
-    int tree_out = b_tree_run(&tree);
-    printf("tree evaluated to %d\n", tree_out);
+    int out_1 = b_tree_run(&tree);
+    printf("%d\n", out_1);
+
+    b_tree_reset(&tree);
+
+    int out_2 = 0;
+    while (b_tree_is_running(&tree)) {
+        out_2 = b_tree_tick(&tree);
+    }
+
+    printf("%d\n", out_2);
 
     return 0;
 }

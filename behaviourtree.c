@@ -177,15 +177,15 @@ void b_tree_create(BTree_t *tree)
     LOG("tree %p created", tree);
 }
 
-uint32_t b_tree_run(BTree_t *tree)
+int32_t b_tree_tick(BTree_t *tree)
 {
+    // return -1 if fail, 0 if running, 1 if successful
     ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_INITIALISED), "Tree is not initialised");
     ASSERT_MSG(!CHECK_FLAG(tree->flags, IS_ROOT_SET), "Tree root not set");
 
-    LOG("tree %p started with entry node %p", tree, tree->current_node);
+    LOG("tree %p ticked on node %p", tree, tree->current_node);
 
-    uint8_t state = 0;
-    while (!CHECK_FLAG(tree->flags, IS_HALTED))
+    if (!CHECK_FLAG(tree->flags, IS_HALTED))
     {
         Node_t *c = tree->current_node;
         uint8_t f = tree->current_node->flags;
@@ -206,11 +206,26 @@ uint32_t b_tree_run(BTree_t *tree)
             if (c->action_vtable->stop)
                 c->action_vtable->stop(c);
             c->action_vtable->std_stop(c);
+            
+            if (c->type == ENTRY) {
+                return (c->state == SUCCESS) ? 1: -1;
+            }
         }
-        state = (c->state == SUCCESS);
     }
+    return 0;
+}
 
-    return state;
+int32_t b_tree_is_running(BTree_t *tree) {
+    return (!CHECK_FLAG(tree->flags, IS_HALTED));
+}
+
+int32_t b_tree_run(BTree_t *tree)
+{
+    int32_t end_state = 0;
+    while (end_state == 0) {
+        end_state = b_tree_tick(tree);
+    }
+    return end_state;
 }
 
 void b_tree_set_root(BTree_t *tree, Node_t *node)

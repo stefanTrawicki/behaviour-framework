@@ -154,7 +154,9 @@ typedef struct BTree
 } BTree_t;
 
 void b_tree_create(BTree_t *tree);
-uint32_t b_tree_run(BTree_t *tree);
+int32_t b_tree_tick(BTree_t *tree);
+int32_t b_tree_is_running(BTree_t *tree);
+int32_t b_tree_run(BTree_t *tree);
 void b_tree_set_root(BTree_t *tree, Node_t *node);
 void b_tree_move(BTree_t *tree, Node_t *node);
 void b_tree_reset(BTree_t *tree);
