@@ -328,6 +328,21 @@ extern int behaviour_node_set_subject(Node *node_handle, void *subject_handle)
     return 1;
 }
 
+extern void * behaviour_node_get_subject(Node *node_handle)
+{
+    ASSERT_MSG(node_handle->type != NT_LEAF, "Non-leaf nodes have no subject");
+    ASSERT_MSG(((LeafNode *)node_handle)->subject == NULL, "Node subject is null");
+    return ((LeafNode *)node_handle)->subject;
+}
+
+extern void * behaviour_node_get_blackboard(Node *node_handle)
+{
+    ASSERT_MSG(node_handle->type != NT_LEAF, "Non-leaf nodes have no blackboard");
+    ASSERT_MSG(((LeafNode *)node_handle)->blackboard == NULL, "Node blackboard is null");
+    return ((LeafNode *)node_handle)->blackboard;
+}
+
+
 extern int behaviour_node_set_repetitions(Node *node_handle, int repetitions)
 {
     ASSERT_MSG(node_handle->type != NT_REPEATER, "Only repeater nodes can have repetitions configured");

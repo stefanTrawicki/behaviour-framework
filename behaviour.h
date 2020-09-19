@@ -38,8 +38,10 @@ extern int       behaviour_node_set_action(Node *node_handle, Action tick_action
 extern int       behaviour_node_set_stop(Node *node_handle, Action stop_action_handle);
 extern int       behaviour_node_set_label(Node *node_handle, char *node_label, int node_label_length);
 extern int       behaviour_node_set_subject(Node *node_handle, void *subject_handle);
-extern int       behaviour_node_set_repetitions(Node *node_handle, int repetitions);
 extern int       behaviour_node_set_blackboard(Node *node_handle, void *blackboard_handle);
+extern void *    behaviour_node_get_subject(Node *node_handle);
+extern void *    behaviour_node_get_blackboard(Node *node_handle);
+extern int       behaviour_node_set_repetitions(Node *node_handle, int repetitions);
 extern int       behaviour_node_get_information(Node *node_handle);
 
 #endif // !BEHAVIOUR_H
